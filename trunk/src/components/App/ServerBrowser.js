@@ -25,7 +25,9 @@ class ServerBrowserBase extends React.Component {
         this.state = {
             servers: {},
             loading: false,
-            error: null
+            error: null,
+            hoveredPlayer: null,
+            copySuccess: null
         }
 
         this.connect_timeout = null
@@ -34,6 +36,7 @@ class ServerBrowserBase extends React.Component {
         this.connectToServer = this.connectToServer.bind(this)
         this.fetchServers = this.fetchServers.bind(this)
         this.refreshServers = this.refreshServers.bind(this)
+        this.copyToClipboard = this.copyToClipboard.bind(this)
     }
 
     componentDidMount() {
@@ -74,8 +77,114 @@ class ServerBrowserBase extends React.Component {
         this.fetchServers()
     }
 
-    connectToServer(address) {
-        if (this.props.twitchUser.role == 'guest') {
+    copyToClipboard(text) {
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.setState({ copySuccess: text })
+                setTimeout(() => {
+                    this.setState({ copySuccess: null })
+                }, 2000)
+            }).catch(() => {
+                // Fallback to older method
+                this.fallbackCopyTextToClipboard(text)
+            })
+        } else {
+            // Fallback for browsers without clipboard API
+            this.fallbackCopyTextToClipboard(text)
+        }
+    }
+
+    fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea")
+        textArea.value = text
+        
+        // Avoid scrolling to bottom
+        textArea.style.top = "0"
+        textArea.style.left = "0"
+        textArea.style.position = "fixed"
+        
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        
+        try {
+            const successful = document.execCommand('copy')
+            if (successful) {
+                this.setState({ copySuccess: text })
+                setTimeout(() => {
+                    this.setState({ copySuccess: null })
+                }, 2000)
+            }
+        } catch (err) {
+            console.error('Fallback copy failed', err)
+        }
+        
+        document.body.removeChild(textArea)
+    }
+
+    formatTime(timeMs) {
+        if (!timeMs || timeMs === 0) return 'No time'
+        
+        // Convert milliseconds to mm:ss:mmm format
+        const totalMs = parseInt(timeMs)
+        const minutes = Math.floor(totalMs / 60000)
+        const seconds = Math.floor((totalMs % 60000) / 1000)
+        const milliseconds = totalMs % 1000
+        
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(3, '0')}`
+    }
+
+    getPlayerWithScores(server) {
+        // Merge players data with scores data
+        const players = Object.values(server.players || {})
+        const scores = server.scores?.players || []
+        
+        return players.map(player => {
+            // Find matching score data by clientId
+            const scoreData = scores.find(score => score.player_num === player.clientId)
+            return {
+                ...player,
+                time: scoreData?.time || 0,
+                follow_num: scoreData?.follow_num || -1,
+                team: scoreData?.follow_num === -1 ? '0' : '3' // 0 = player, 3 = spectator
+            }
+        })
+    }
+
+    isServerConnectable(server) {
+        const playersWithScores = this.getPlayerWithScores(server)
+        
+        // Filter out spectators (team === '3' or follow_num !== -1)
+        const activePlayers = playersWithScores.filter(player => player.follow_num === -1)
+        
+        if (activePlayers.length === 0) {
+            return { connectable: true, reason: null }
+        }
+
+        // Check if all active players have nospec enabled
+        const allNospec = activePlayers.every(player => player.nospec === 1)
+
+        if (allNospec) {
+            return { 
+                connectable: false, 
+                reason: 'All active players have nospec enabled. Cannot spectate anyone on this server.' 
+            }
+        }
+
+        return { connectable: true, reason: null }
+    }
+
+    connectToServer(address, server) {
+        if (this.props.twitchUser.role === 'guest') {
+            return
+        }
+
+        const { connectable, reason } = this.isServerConnectable(server)
+        
+        if (!connectable) {
+            // Show error message instead of connecting
+            alert(reason)
             return
         }
 
@@ -102,22 +211,81 @@ class ServerBrowserBase extends React.Component {
         }
     }
 
-    renderServerRow(address, server) {
-        const playerCount = Object.keys(server.players || {}).length
-        const playerNames = Object.values(server.players || {}).map(player => player.name).join(', ')
+    getPlayerStatus(player) {
+        const statuses = []
+        
+        if (player.nospec === 1) {
+            statuses.push('No Spectating Enabled')
+        }
+
+        // Check if player is spectating someone
+        if (player.follow_num && player.follow_num !== -1) {
+            statuses.push(`Spectating Player ID ${player.follow_num}`)
+        }
+
+        return statuses
+    }
+
+    renderPlayerTooltip(player) {
+        const statuses = this.getPlayerStatus(player)
         
         return (
-            <tr key={address} className={playerCount > 0 ? 'has-players' : 'empty'}>
+            <div className="player-tooltip">
+                <div className="tooltip-name"><Q3STR s={player.name}/></div>
+                <div className="tooltip-info">
+                    <div>Role: {player.follow_num === -1 ? 'Player' : 'Spectator'}</div>
+                    {player.time > 0 && <div>Best Time: {this.formatTime(player.time)}</div>}
+                    <div>Country: {player.country}</div>
+                    {player.logged && <div>Status: Logged in</div>}
+                    {statuses.length > 0 && (
+                        <div className="tooltip-status">
+                            {statuses.map((status, idx) => (
+                                <div key={idx} className="status-item">{status}</div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
+    renderServerRow(address, server) {
+        const playersWithScores = this.getPlayerWithScores(server)
+        const playerCount = playersWithScores.length
+        const { connectable, reason } = this.isServerConnectable(server)
+        
+        return (
+            <tr key={address} className={`${playerCount > 0 ? 'has-players' : 'empty'} ${!connectable ? 'not-connectable' : ''}`}>
                 <td>
                     <div className="server-info">
-                        <div className="server-name link" onClick={() => this.connectToServer(address)}>
-                            <Q3STR s={server.hostname}/>
+                        <div className="server-name-row">
+                            <div 
+                                className={`server-name ${connectable ? 'link' : 'disabled-link'}`}
+                                onClick={() => connectable && this.connectToServer(address, server)}
+                                title={!connectable ? reason : `Connect to ${address}`}
+                            >
+                                <Q3STR s={server.hostname}/>
+                            </div>
+                            <div className="server-actions">
+                                <button 
+                                    className={`copy-button ${this.state.copySuccess === address ? 'copied' : ''}`}
+                                    onClick={() => this.copyToClipboard(address)}
+                                    title="Copy IP address"
+                                >
+                                    {this.state.copySuccess === address ? '✓' : '📋'}
+                                </button>
+                            </div>
                         </div>
                         <div className="server-details">
                             <span className="server-address">{address}</span>
                             <span className="server-map">Map: <Q3STR s={server.map}/></span>
                             <span className="server-physics">{PHYSICS_TYPES[server.defrag] || server.defrag.toUpperCase()}</span>
                         </div>
+                        {!connectable && (
+                            <div className="server-warning">
+                                ⚠️ {reason}
+                            </div>
+                        )}
                     </div>
                 </td>
                 <td className="player-count">
@@ -126,12 +294,31 @@ class ServerBrowserBase extends React.Component {
                 <td className="player-names">
                     {playerCount > 0 ? (
                         <div className="players-list">
-                            {Object.values(server.players).slice(0, 3).map((player, idx) => (
-                                <span key={idx} className="player-name">
-                                    <Q3STR s={player.name}/>
-                                </span>
-                            ))}
-                            {playerCount > 3 && <span className="more-players">+{playerCount - 3} more</span>}
+                            {playersWithScores.slice(0, 4).map((player, idx) => {
+                                const statuses = this.getPlayerStatus(player)
+                                const hasStatus = statuses.length > 0 || player.time > 0
+                                
+                                return (
+                                    <div 
+                                        key={idx} 
+                                        className={`player-name-container ${hasStatus ? 'has-status' : ''}`}
+                                        onMouseEnter={() => this.setState({hoveredPlayer: `${address}-${idx}`})}
+                                        onMouseLeave={() => this.setState({hoveredPlayer: null})}
+                                    >
+                                        <span className="player-name">
+                                            <Q3STR s={player.name}/>
+                                            {player.follow_num === -1 ? '' : ' (SPEC)'}
+                                            {hasStatus && <span className="status-indicator">*</span>}
+                                        </span>
+                                        {this.state.hoveredPlayer === `${address}-${idx}` && hasStatus && (
+                                            <div className="player-tooltip-container">
+                                                {this.renderPlayerTooltip(player)}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
+                            {playerCount > 4 && <span className="more-players">+{playerCount - 4} more</span>}
                         </div>
                     ) : (
                         <span className="empty-text">Empty</span>
@@ -149,13 +336,18 @@ class ServerBrowserBase extends React.Component {
         const maxHeight = `${document.querySelector('.app-wrap').clientHeight - 220}px`
         const serverEntries = Object.entries(this.state.servers)
         
-        // Sort servers: active players first, then by player count
+        // Sort servers: connectable with players first, then by player count
         const sortedServers = serverEntries.sort(([addressA, serverA], [addressB, serverB]) => {
-            const playersA = Object.keys(serverA.players || {}).length
-            const playersB = Object.keys(serverB.players || {}).length
+            const playersA = this.getPlayerWithScores(serverA).length
+            const playersB = this.getPlayerWithScores(serverB).length
+            const connectableA = this.isServerConnectable(serverA).connectable
+            const connectableB = this.isServerConnectable(serverB).connectable
             
-            if (playersA > 0 && playersB === 0) return -1
-            if (playersA === 0 && playersB > 0) return 1
+            // Prioritize connectable servers with players
+            if (connectableA && playersA > 0 && (!connectableB || playersB === 0)) return -1
+            if (connectableB && playersB > 0 && (!connectableA || playersA === 0)) return 1
+            
+            // Then sort by player count
             return playersB - playersA
         })
         
@@ -194,7 +386,7 @@ class ServerBrowserBase extends React.Component {
                                             <tr>
                                                 <th>Server</th>
                                                 <th>Players</th>
-                                                <th>Player Names</th>
+                                                <th>Player Details</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -210,7 +402,10 @@ class ServerBrowserBase extends React.Component {
                                         </tbody>
                                     </table>
                                     <div className="note m-t">
-                                        Click on server name to connect. Total servers: {sortedServers.length}
+                                        <div>Total servers: {sortedServers.length}</div>
+                                        <div>* = Player has special status (hover for details)</div>
+                                        <div>(SPEC) = Player is spectating</div>
+                                        <div>📋 = Copy IP</div>
                                         {this.props.twitchUser.role === 'guest' && (
                                             <div className="guest-warning">You must be logged in to connect to servers</div>
                                         )}

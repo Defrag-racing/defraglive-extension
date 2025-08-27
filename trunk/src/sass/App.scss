@@ -1280,6 +1280,7 @@ body {
     }
 }
 
+// Enhanced Server Browser Styles
 .servers-table {
     border-width: 1px;
     border-style: solid;
@@ -1313,13 +1314,64 @@ body {
     }
 
     .server-info {
-        .server-name {
-            font-weight: bold;
+        .server-name-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 3px;
-            cursor: pointer;
             
-            &:hover {
-                text-decoration: underline;
+            .server-name {
+                font-weight: bold;
+                cursor: pointer;
+                flex: 1;
+                
+                &.link:hover {
+                    text-decoration: underline;
+                }
+                
+                &.disabled-link {
+                    cursor: not-allowed;
+                    opacity: 0.6;
+                    
+                    &:hover {
+                        text-decoration: line-through;
+                    }
+                }
+            }
+            
+            .server-actions {
+                display: flex;
+                gap: 5px;
+                margin-left: 10px;
+                
+                .protocol-button, .copy-button {
+                    background: rgba(0, 0, 0, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    color: inherit;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    transition: all 0.2s ease;
+                    
+                    &:hover {
+                        background: rgba(0, 0, 0, 0.2);
+                        transform: scale(1.1);
+                    }
+                    
+                    &.copied {
+                        background: #4CAF50;
+                        color: white;
+                    }
+                }
+                
+                .protocol-button {
+                    font-size: 0.7rem;
+                    
+                    &:hover {
+                        color: #4CAF50;
+                    }
+                }
             }
         }
 
@@ -1332,12 +1384,24 @@ body {
 
             .server-address {
                 font-family: monospace;
+                font-weight: bold;
             }
 
             .server-physics {
                 font-weight: 500;
                 text-transform: uppercase;
             }
+        }
+        
+        .server-warning {
+            margin-top: 5px;
+            padding: 4px 6px;
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 3px;
+            font-size: 0.7rem;
+            color: #ffa000;
+            line-height: 1.2;
         }
     }
 
@@ -1352,21 +1416,78 @@ body {
     }
 
     .player-names {
-        max-width: 200px;
+        max-width: 250px;
+        position: relative;
 
         .players-list {
-            .player-name {
+            .player-name-container {
+                position: relative;
                 display: inline-block;
                 margin-right: 8px;
                 margin-bottom: 2px;
-                font-size: 0.8rem;
-
-                &:after {
-                    content: ",";
+                
+                .player-name {
+                    font-size: 0.8rem;
+                    
+                    &.has-status {
+                        border-bottom: 1px dotted currentColor;
+                        cursor: help;
+                    }
+                    
+                    .status-indicator {
+                        color: #ff9800;
+                        font-weight: bold;
+                        margin-left: 2px;
+                    }
+                    
+                    &:after {
+                        content: ",";
+                    }
+                    
+                    &:last-child:after {
+                        content: "";
+                    }
                 }
-
-                &:last-child:after {
-                    content: "";
+                
+                .player-tooltip-container {
+                    position: absolute;
+                    top: 100%;
+                    left: 0;
+                    z-index: 1000;
+                    margin-top: 5px;
+                    
+                    .player-tooltip {
+                        background: rgba(0, 0, 0, 0.95);
+                        color: white;
+                        padding: 8px 10px;
+                        border-radius: 4px;
+                        font-size: 0.7rem;
+                        white-space: nowrap;
+                        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        
+                        .tooltip-name {
+                            font-weight: bold;
+                            margin-bottom: 4px;
+                            color: #4CAF50;
+                        }
+                        
+                        .tooltip-info {
+                            .tooltip-status {
+                                margin-top: 4px;
+                                
+                                .status-item {
+                                    color: #ff9800;
+                                    font-weight: 500;
+                                    margin-bottom: 2px;
+                                    
+                                    &:last-child {
+                                        margin-bottom: 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1384,13 +1505,22 @@ body {
     }
 
     .has-players {
+        // Highlight servers with players
         .server-name {
-            // Highlight servers with players
+            // You can add special styling here if needed
         }
     }
 
     .empty {
         opacity: 0.7;
+    }
+    
+    .not-connectable {
+        opacity: 0.6;
+        
+        .server-name.disabled-link {
+            color: #f44336 !important;
+        }
     }
 
     .no-servers {
@@ -1401,7 +1531,7 @@ body {
     }
 }
 
-// Theme-specific styles for server browser
+// Theme-specific server browser enhancements
 .theme-light {
     .serverbrowser-content {
         background-color: rgba(230, 230, 235, 0.9);
@@ -1434,11 +1564,42 @@ body {
             border-color: rgb(176, 176, 176);
         }
 
-        .server-info .server-name {
-            color: rgb(38, 79, 137);
+        .server-info {
+            .server-name {
+                color: rgb(38, 79, 137);
 
-            &:hover {
-                color: rgb(34, 104, 201);
+                &:hover {
+                    color: rgb(34, 104, 201);
+                }
+                
+                &.disabled-link {
+                    color: #d32f2f !important;
+                }
+            }
+            
+            .server-actions {
+                .protocol-button, .copy-button {
+                    background: rgba(255, 255, 255, 0.8);
+                    border-color: rgba(0, 0, 0, 0.2);
+                    
+                    &:hover {
+                        background: rgba(255, 255, 255, 0.95);
+                    }
+                }
+            }
+        }
+        
+        .player-tooltip {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: #333 !important;
+            border: 1px solid rgba(0, 0, 0, 0.2) !important;
+            
+            .tooltip-name {
+                color: #2e7d32 !important;
+            }
+            
+            .status-item {
+                color: #f57c00 !important;
             }
         }
     }
@@ -1476,11 +1637,28 @@ body {
             border-color: rgb(99, 99, 99);
         }
 
-        .server-info .server-name {
-            color: rgb(83, 151, 246);
+        .server-info {
+            .server-name {
+                color: rgb(83, 151, 246);
 
-            &:hover {
-                color: rgb(23, 119, 254);
+                &:hover {
+                    color: rgb(23, 119, 254);
+                }
+                
+                &.disabled-link {
+                    color: #f44336 !important;
+                }
+            }
+            
+            .server-actions {
+                .protocol-button, .copy-button {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-color: rgba(255, 255, 255, 0.2);
+                    
+                    &:hover {
+                        background: rgba(255, 255, 255, 0.2);
+                    }
+                }
             }
         }
     }
