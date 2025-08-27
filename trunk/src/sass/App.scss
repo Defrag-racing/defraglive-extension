@@ -52,16 +52,45 @@ body {
     font-family: 'Inter', Roobert, 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.qcolor1 { color: #E21D1D; }
-.qcolor2 { color: #4da238; }
-.qcolor3 { color: #E8BD13; }
-.qcolor4 { color: #1D76CF; }
-.qcolor5 { color: #25BEC7; }
-.qcolor6 { color: #BE2EBE; }
-.qcolor7 { color: #fff; }
-.qcolor8 { color: #C97223; }
-.qcolor9 { color: #8E8686; }
-.qcolor0 { color: #000; }
+// Original Quake 3 color codes (corrected with proper hex values)
+.qcolor0 { color: #000000; } // ^0: black
+.qcolor1 { color: #fe0000; } // ^1: red  
+.qcolor2 { color: #00fe00; } // ^2: green
+.qcolor3 { color: #fefe00; } // ^3: yellow
+.qcolor4 { color: #0000fe; } // ^4: blue
+.qcolor5 { color: #00fefe; } // ^5: cyan
+.qcolor6 { color: #fe00fe; } // ^6: magenta
+.qcolor7 { color: #fefefe; } // ^7: white
+.qcolor8 { color: #fe7e00; } // ^8: orange
+.qcolor9 { color: #7e7e7e; } // ^9: gray
+
+// Extended color palette (a-z)
+.qcolora { color: #fe0000; } // ^a: red
+.qcolorb { color: #fe4400; } // ^b: red-orange
+.qcolorc { color: #fe7e00; } // ^c: orange
+.qcolord { color: #feba00; } // ^d: dark orange
+.qcolore { color: #fefe00; } // ^e: yellow
+.qcolorf { color: #bafe00; } // ^f: yellow-green
+.qcolorg { color: #7efe00; } // ^g: light green
+.qcolorh { color: #44fe00; } // ^h: green
+.qcolori { color: #00fe00; } // ^i: green
+.qcolorj { color: #00fe44; } // ^j: green-cyan
+.qcolork { color: #00fe7e; } // ^k: cyan-green
+.qcolorl { color: #00fdb9; } // ^l: light cyan (note: fd instead of fe)
+.qcolorm { color: #00fefe; } // ^m: cyan
+.qcolorn { color: #00bafe; } // ^n: light blue
+.qcoloro { color: #007efe; } // ^o: blue-cyan
+.qcolorp { color: #0044fe; } // ^p: blue
+.qcolorq { color: #0000fe; } // ^q: blue
+.qcolorr { color: #4400fe; } // ^r: blue-purple
+.qcolors { color: #7e00fe; } // ^s: purple
+.qcolort { color: #ba00fe; } // ^t: magenta-purple
+.qcoloru { color: #fe00fe; } // ^u: magenta
+.qcolorv { color: #fa01b7; } // ^v: pink-magenta
+.qcolorw { color: #fe007e; } // ^w: pink
+.qcolorx { color: #fe0044; } // ^x: red-pink
+.qcolory { color: #fefefe; } // ^y: white
+.qcolorz { color: #7e7e7e; } // ^z: gray
 
 .app-wrap {
     position: relative;

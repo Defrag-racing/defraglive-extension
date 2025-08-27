@@ -6,13 +6,14 @@ function sanitizeString(text) {
     return element.innerHTML
 }
 
-// replaces ^7^2^... multiple colors next to eachother with just one ^7
-const r_clean = /(\^[0-9]){2,}/gi
+// replaces ^7^2^... multiple colors next to each other with just one
+const r_clean = /(\^[0-9a-z]){2,}/gi
 
 // removes color codes from end of string
-const r_end = /(\^[0-9])+$/i
+const r_end = /(\^[0-9a-z])+$/i
 
-const r_colors = /\^([0-9]{1})(.?[^\^]+)/gi
+// Updated regex to match both numbers and letters a-z
+const r_colors = /\^([0-9a-z]{1})(.?[^\^]+)/gi
 
 export function Q3STR(props) {
     let newstr = sanitizeString(props.s)
