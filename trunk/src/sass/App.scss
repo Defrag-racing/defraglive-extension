@@ -1294,6 +1294,15 @@ body {
         opacity: 0.5;
     }
 
+    // Column width adjustments
+    th:first-child, td:first-child {
+        width: 45%;
+    }
+    
+    th:last-child, td:last-child {
+        width: 55%;
+    }
+
     thead {
         th {
             font-weight: bold;
@@ -1338,21 +1347,31 @@ body {
                     }
                 }
             }
-            
-            .server-actions {
+        }
+
+        .server-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 0.75rem;
+            opacity: 0.8;
+
+            .detail-row {
                 display: flex;
-                gap: 5px;
-                margin-left: 10px;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 2px;
                 
-                .protocol-button, .copy-button {
+                .copy-button-small {
                     background: rgba(0, 0, 0, 0.1);
                     border: 1px solid rgba(255, 255, 255, 0.2);
                     color: inherit;
-                    padding: 2px 6px;
-                    border-radius: 3px;
+                    padding: 1px 4px;
+                    border-radius: 2px;
                     cursor: pointer;
-                    font-size: 0.8rem;
+                    font-size: 0.7rem;
                     transition: all 0.2s ease;
+                    margin-left: 5px;
                     
                     &:hover {
                         background: rgba(0, 0, 0, 0.2);
@@ -1365,22 +1384,12 @@ body {
                     }
                 }
                 
-                .protocol-button {
-                    font-size: 0.7rem;
-                    
-                    &:hover {
-                        color: #4CAF50;
-                    }
+                .player-count-inline {
+                    font-size: 0.75rem;
+                    opacity: 0.8;
+                    font-weight: 500;
                 }
             }
-        }
-
-        .server-details {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            font-size: 0.75rem;
-            opacity: 0.8;
 
             .server-address {
                 font-family: monospace;
@@ -1390,6 +1399,14 @@ body {
             .server-physics {
                 font-weight: 500;
                 text-transform: uppercase;
+            }
+            
+            .server-map a {
+                text-decoration: none;
+                
+                &:hover {
+                    text-decoration: underline;
+                }
             }
         }
         
@@ -1405,18 +1422,7 @@ body {
         }
     }
 
-    .player-count {
-        text-align: center;
-        width: 60px;
-
-        .count {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-    }
-
     .player-names {
-        max-width: 250px;
         position: relative;
 
         .players-list {
@@ -1432,6 +1438,13 @@ body {
                     &.has-status {
                         border-bottom: 1px dotted currentColor;
                         cursor: help;
+                    }
+                    
+                    .player-time {
+                        color: #4CAF50;
+                        font-weight: 500;
+                        font-size: 0.75rem;
+                        opacity: 0.9;
                     }
                     
                     .status-indicator {
@@ -1504,13 +1517,6 @@ body {
         }
     }
 
-    .has-players {
-        // Highlight servers with players
-        .server-name {
-            // You can add special styling here if needed
-        }
-    }
-
     .empty {
         opacity: 0.7;
     }
@@ -1577,16 +1583,26 @@ body {
                 }
             }
             
-            .server-actions {
-                .protocol-button, .copy-button {
-                    background: rgba(255, 255, 255, 0.8);
-                    border-color: rgba(0, 0, 0, 0.2);
-                    
-                    &:hover {
-                        background: rgba(255, 255, 255, 0.95);
-                    }
+            .server-map a {
+                color: #2563EB !important;
+                
+                &:hover {
+                    color: #1D4ED8 !important;
                 }
             }
+        }
+        
+        .copy-button-small {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 0, 0, 0.2);
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.95);
+            }
+        }
+        
+        .player-time {
+            color: #2E7D32 !important;
         }
         
         .player-tooltip {
@@ -1650,16 +1666,26 @@ body {
                 }
             }
             
-            .server-actions {
-                .protocol-button, .copy-button {
-                    background: rgba(255, 255, 255, 0.1);
-                    border-color: rgba(255, 255, 255, 0.2);
-                    
-                    &:hover {
-                        background: rgba(255, 255, 255, 0.2);
-                    }
+            .server-map a {
+                color: #83C5F7 !important;
+                
+                &:hover {
+                    color: #A3D5FF !important;
                 }
             }
+        }
+        
+        .copy-button-small {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        }
+        
+        .player-time {
+            color: #4CAF50 !important;
         }
     }
 }
@@ -1689,4 +1715,67 @@ body {
         transform: translateX(0) !important;
         opacity: 1.0 !important;
     }
+}
+
+// Spectator and Player Grouping Styling
+.player-group {
+    margin-bottom: 5px; /* Space between player groups */
+}
+
+.player-name-container {
+    display: block; /* Force new line for each player/spectator */
+    margin-bottom: 2px; /* Small gap between lines */
+}
+
+.spectator {
+    padding-left: 20px; /* Indent spectators */
+    font-style: italic;
+}
+
+.free-spectators {
+    margin-top: 10px; /* Space before free spectators */
+}
+
+.free-spectators .player-name::after {
+    content: " (spect)";
+    color: #888;
+}
+
+// Server Browser Button Hover
+.serverbrowser-button:hover::after {
+    content: "Servers";
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    top: 35px;
+    left: 0;
+    z-index: 10; /* Ensure it appears above other elements */
+}
+
+// Tooltip and Overflow Fixes
+.player-tooltip-container {
+    position: absolute;
+    z-index: 20; /* Above hover text */
+    max-width: 200px; /* Prevent tooltip overflow */
+    word-wrap: break-word; /* Handle long names */
+    background: rgba(0, 0, 0, 0.9); /* Ensure visibility */
+    padding: 5px; /* Add padding for readability */
+}
+
+.players-list {
+    max-height: 300px; /* Increased height for more content */
+    overflow-y: auto; /* Scroll if needed */
+    padding-right: 10px; /* Space for scrollbar */
+}
+
+.servers-table {
+    width: 100%; /* Ensure table fills container */
+    table-layout: fixed; /* Fixed layout for column widths */
+}
+
+.content {
+    max-height: calc(100vh - 200px); /* Constrain height for scrolling */
+    overflow-y: auto; /* Enable scrolling for the entire content area */
 }
