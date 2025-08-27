@@ -6,6 +6,7 @@ import Row from './Rows'
 import { NotifyLines } from './NotifyLines'
 import { CurrentPlayerName } from './CurrentPlayerName'
 import { PlayerList } from './PlayerList'
+import { ServerBrowser } from './ServerBrowser'
 import { unix2time } from '../../util/DateTime'
 import Message from '../../partials/StatusMessages'
 
@@ -435,6 +436,7 @@ class ConsoleBase extends React.Component {
                 </div>
                 <NotifyLines onSubmit={this.submitMessage} console={this.state}/>
                 <PlayerList sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
+                <ServerBrowser sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
                 <CurrentPlayerName/>
             </>
         )

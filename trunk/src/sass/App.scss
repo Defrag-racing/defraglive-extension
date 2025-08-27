@@ -1068,3 +1068,418 @@ body {
         white-space: normal;
     }
 }
+// -----------------------------------------------------------------
+// - Server Browser
+// -----------------------------------------------------------------
+
+.serverbrowser-opened {
+    .serverbrowser-button {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 25px;
+    }
+
+    .serverbrowser-content-wrap {
+        display: flex;
+        animation: playerlist-show $duration-fast02 $motion-entrance-productive;
+    }
+
+    .serverbrowser-wrap {
+        z-index: 5;
+    }
+}
+.serverbrowser-closed {
+    .serverbrowser-content-wrap {
+        display: none;
+    }
+}
+
+.serverbrowser-wrap {
+    position: absolute;
+    left: 15px;
+    top: 0;
+    min-height: 200px;
+    z-index: 3;
+
+    .serverbrowser-button {
+        position: absolute;
+        left: 0;
+        top: 260px; // Position below player list button
+        width: 30px;
+        height: 30px;
+        font-size: 1.5rem;
+        text-align: center;
+        line-height: 30px;
+        font-weight: normal;
+        z-index: 2;
+        cursor: pointer;
+        transition: opacity 125ms ease-in;
+        transition: transform $duration-fast02 $motion-entrance-productive;
+        user-select: none;
+    
+        &:hover {
+            transform: scale(1.1);
+        }
+    }
+
+    .serverbrowser-svg {
+        fill: #9147FF;
+        width: 30px;
+        height: 30px;
+
+        &.opened {
+            fill: #fff;
+        }
+    }
+}
+
+.serverbrowser-content-wrap {
+    position: absolute;
+    left: 50px;
+    top: 0;
+    width: 50%;
+    min-width: 450px;
+    max-width: 800px;
+    padding: 100px 0 5rem 0;
+    display: flex;
+    align-items: stretch;
+    box-sizing: border-box;
+    user-select: none;
+
+    @include mq($until: tablet) {
+        min-width: 350px;
+        width: 90%;
+    }
+}
+
+.serverbrowser-content {
+    transition: opacity 125ms ease-in;
+    transition: transform $duration-fast02 $motion-entrance-productive;
+    box-shadow: rgba(0, 0, 0, 0.2) 5px 5px 20px;
+    width: 100%;
+    overflow: auto;
+    border-radius: 5px;
+    padding: 15px;
+
+    .header-top {
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .h1 {
+            font-size: 1.8rem;
+            font-weight: 200;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .refresh-button {
+            cursor: pointer;
+            transition: transform $duration-fast02 $motion-entrance-productive;
+            opacity: 0.8;
+
+            &:hover {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+
+            .refresh-svg {
+                width: 20px;
+                height: 20px;
+            }
+        }
+
+        .close {
+            cursor: pointer;
+            transition: transform $duration-fast02 $motion-entrance-productive;
+
+            &:hover {
+                transform: scale(1.1);
+            }
+
+            svg {
+                width: 25px;
+                height: 25px;
+            }
+        }
+    }
+
+    .loading-message, .error-message {
+        text-align: center;
+        padding: 20px;
+        font-style: italic;
+    }
+
+    .error-message {
+        .retry-button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: 1px solid;
+            background: transparent;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+    }
+
+    .section {
+        margin-bottom: 15px;
+
+        &:last-child {
+            margin: 0;
+        }
+    }
+
+    .content {
+        font-size: 0.9rem;
+    }
+
+    .note {
+        font-style: italic;
+        font-size: 0.7rem;
+        margin-top: 10px;
+
+        .guest-warning {
+            color: #ff6b6b;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+    }
+}
+
+.servers-table {
+    border-width: 1px;
+    border-style: solid;
+    width: 100%;
+    border-collapse: collapse;
+    position: relative;
+    opacity: 1;
+
+    &.loading { 
+        pointer-events: none;
+        opacity: 0.5;
+    }
+
+    thead {
+        th {
+            font-weight: bold;
+            padding: 8px 5px;
+            border-width: 1px;
+            border-style: solid;
+            text-align: left;
+            font-size: 0.8rem;
+        }
+    }
+
+    td {
+        padding: 8px 5px;
+        border-width: 1px;
+        border-style: solid;
+        white-space: normal;
+        vertical-align: top;
+    }
+
+    .server-info {
+        .server-name {
+            font-weight: bold;
+            margin-bottom: 3px;
+            cursor: pointer;
+            
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+
+        .server-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 0.75rem;
+            opacity: 0.8;
+
+            .server-address {
+                font-family: monospace;
+            }
+
+            .server-physics {
+                font-weight: 500;
+                text-transform: uppercase;
+            }
+        }
+    }
+
+    .player-count {
+        text-align: center;
+        width: 60px;
+
+        .count {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+    }
+
+    .player-names {
+        max-width: 200px;
+
+        .players-list {
+            .player-name {
+                display: inline-block;
+                margin-right: 8px;
+                margin-bottom: 2px;
+                font-size: 0.8rem;
+
+                &:after {
+                    content: ",";
+                }
+
+                &:last-child:after {
+                    content: "";
+                }
+            }
+
+            .more-players {
+                font-style: italic;
+                opacity: 0.7;
+                font-size: 0.75rem;
+            }
+        }
+
+        .empty-text {
+            opacity: 0.5;
+            font-style: italic;
+        }
+    }
+
+    .has-players {
+        .server-name {
+            // Highlight servers with players
+        }
+    }
+
+    .empty {
+        opacity: 0.7;
+    }
+
+    .no-servers {
+        text-align: center;
+        padding: 20px;
+        font-style: italic;
+        opacity: 0.7;
+    }
+}
+
+// Theme-specific styles for server browser
+.theme-light {
+    .serverbrowser-content {
+        background-color: rgba(230, 230, 235, 0.9);
+        background-image: url('../img/q3logo_5p.png');
+
+        .header-top {
+            .h1 {
+                color: #7137c7;
+            }
+            .close svg, .refresh-button .refresh-svg {
+                fill: rgb(100, 100, 100);
+            }
+        }
+
+        .error-message .retry-button {
+            border-color: #7137c7;
+            color: #7137c7;
+            
+            &:hover {
+                background-color: #7137c7;
+                color: white;
+            }
+        }
+    }
+
+    .servers-table {
+        border-color: rgb(176, 176, 176);
+
+        th, td {
+            border-color: rgb(176, 176, 176);
+        }
+
+        .server-info .server-name {
+            color: rgb(38, 79, 137);
+
+            &:hover {
+                color: rgb(34, 104, 201);
+            }
+        }
+    }
+}
+
+.theme-dark {
+    .serverbrowser-content {
+        background-color: rgba(30, 30, 35, 0.9);
+        background-image: url('../img/q3logo_20p.png');
+
+        .header-top {
+            .h1 {
+                color: #a96fff;
+            }
+            .close svg, .refresh-button .refresh-svg {
+                fill: rgb(100, 100, 100);
+            }
+        }
+
+        .error-message .retry-button {
+            border-color: #a96fff;
+            color: #a96fff;
+            
+            &:hover {
+                background-color: #a96fff;
+                color: white;
+            }
+        }
+    }
+
+    .servers-table {
+        border-color: rgb(99, 99, 99);
+
+        th, td {
+            border-color: rgb(99, 99, 99);
+        }
+
+        .server-info .server-name {
+            color: rgb(83, 151, 246);
+
+            &:hover {
+                color: rgb(23, 119, 254);
+            }
+        }
+    }
+}
+
+// Control visibility for server browser button
+.controls-visible {
+    .serverbrowser-button {
+        transform: translateX(0);
+        opacity: 1.0;
+    }
+}
+.controls-hidden:not(.serverbrowser-opened):not(:hover) {
+    .serverbrowser-button {
+        transform: translateX(-10px);
+        opacity: 0;
+    }
+}
+
+// Mobile adjustments
+.isMobile-true {
+    .serverbrowser-content-wrap {
+        width: 95%;
+        min-width: 300px;
+    }
+
+    .serverbrowser-button {
+        transform: translateX(0) !important;
+        opacity: 1.0 !important;
+    }
+}

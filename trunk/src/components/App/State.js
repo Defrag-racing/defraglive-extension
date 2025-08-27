@@ -5,6 +5,7 @@ const defaultAppState = {
     isConsoleOpen: false,
     isNotifyOpen: false,
     isPlayerlistOpen: false,
+    isServerBrowserOpen: false,  // Added server browser state
 }
 const defaultServerState = {
     'initialized': false,
@@ -26,6 +27,7 @@ export const appState = {
                 isConsoleOpen: !state.isConsoleOpen,
                 isNotifyOpen: false,
                 isPlayerlistOpen: false,
+                isServerBrowserOpen: false,  // Close server browser when console opens
             }
         },
 
@@ -34,6 +36,7 @@ export const appState = {
                 isConsoleOpen: false,
                 isNotifyOpen: !state.isNotifyOpen,
                 isPlayerlistOpen: false,
+                isServerBrowserOpen: false,  // Close server browser when notify opens
             }
         },
 
@@ -42,6 +45,17 @@ export const appState = {
                 isConsoleOpen: false,
                 isNotifyOpen: false,
                 isPlayerlistOpen: !state.isPlayerlistOpen,
+                isServerBrowserOpen: false,  // Close server browser when player list opens
+            }
+        },
+
+        // Added server browser toggle reducer
+        TOGGLE_SERVERBROWSER: (state, data) => {
+            return {
+                isConsoleOpen: false,
+                isNotifyOpen: false,
+                isPlayerlistOpen: false,
+                isServerBrowserOpen: !state.isServerBrowserOpen,
             }
         }
     },
@@ -56,6 +70,11 @@ export const appState = {
 
         togglePlayerlist() {
             dispatch.appState.TOGGLE_PLAYERLIST()
+        },
+
+        // Added server browser toggle effect
+        toggleServerBrowser() {
+            dispatch.appState.TOGGLE_SERVERBROWSER()
         },
     })
 }
@@ -103,6 +122,7 @@ export const mapDispatch = (dispatch) => ({
     toggleConsole: () => dispatch.appState.toggleConsole(),
     toggleNotify: () => dispatch.appState.toggleNotify(),
     togglePlayerlist: () => dispatch.appState.togglePlayerlist(),
+    toggleServerBrowser: () => dispatch.appState.toggleServerBrowser(),  // Added server browser dispatch
 
     getServerstate: () => dispatch.serverState.getServerstate(),
     updateServerstate: (data) => dispatch.serverState.updateServerstate(data),
