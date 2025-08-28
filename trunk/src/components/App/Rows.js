@@ -5,7 +5,9 @@ export default function Row(props) {
     if(!props.data) {
         return null
     }
-    
+        if(!props.data.content || typeof props.data.content !== 'string') {
+        return null
+    }
     if(props.data.content.trim() === "") {
         return null
     }

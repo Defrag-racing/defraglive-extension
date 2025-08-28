@@ -33,7 +33,7 @@ $duration-slow02: 700ms;		// Background dimming
         opacity: 0.3;
     }
     100% {
-        transform: translatex(0px);
+        transform: translateX(0px);
         opacity: 1;
     }
 }
@@ -1778,4 +1778,381 @@ body {
 .content {
     max-height: calc(100vh - 200px); /* Constrain height for scrolling */
     overflow-y: auto; /* Enable scrolling for the entire content area */
+}
+
+// Help Tooltip Styling
+.help-icon {
+    display: inline-block;
+    margin-left: 5px;
+    cursor: help;
+    font-size: 0.8em;
+    color: #bbb;
+}
+
+.help-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 5px;
+    border-radius: 3px;
+    z-index: 20;
+    max-width: 200px;
+    word-wrap: break-word;
+    margin-top: 5px;
+}
+
+// New Message Popup Styling
+.new-message-popup {
+    position: sticky;
+    bottom: 0;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    padding: 5px;
+    text-align: center;
+    font-size: 0.9em;
+    z-index: 10;
+}
+
+// Instructions Styling
+.instructions {
+    font-size: 0.9em;
+    color: #888;
+    margin-bottom: 10px;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+}
+/* Enhanced PlayerList Styles - Add to existing App.scss */
+
+/* Player Row Container */
+.player-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+}
+
+.player-info {
+    flex: 1;
+    cursor: pointer;
+
+    &.link:hover {
+        text-decoration: underline;
+    }
+    
+    &.nospec-link {
+        cursor: not-allowed;
+        opacity: 0.7;
+        
+        &:hover {
+            text-decoration: line-through;
+        }
+    }
+    
+    &.has-status {
+        border-bottom: 1px dotted currentColor;
+        cursor: help;
+    }
+}
+
+/* NoSpec Player Styling */
+.nospec-player {
+    background: rgba(255, 193, 7, 0.1);
+    
+    .player-info {
+        position: relative;
+        
+        .nospec-indicator {
+            color: #ff9800;
+            font-weight: 500;
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+    }
+}
+
+/* Request Spectate Button */
+.request-spectate-btn {
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+    user-select: none;
+    margin-left: 8px;
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+    }
+    
+    &.cooldown {
+        opacity: 0.4;
+        cursor: not-allowed;
+        
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: none;
+        }
+    }
+}
+
+/* Spectator Indentation and Styling */
+.players-table {
+    .spectator {
+        td {
+            padding-left: 20px;
+            
+            .player-info {
+                font-style: italic;
+                opacity: 0.9;
+                
+                &:before {
+                    content: "↳ ";
+                    color: #888;
+                }
+            }
+        }
+    }
+    
+    .player-time {
+        color: #4CAF50;
+        font-weight: 500;
+        font-size: 0.8rem;
+        opacity: 0.9;
+    }
+    
+    .status-indicator {
+        color: #ff9800;
+        font-weight: bold;
+        margin-left: 2px;
+    }
+}
+
+/* Player Tooltip Enhancements */
+.player-tooltip-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    margin-top: 5px;
+    max-width: 250px;
+    
+    .player-tooltip {
+        background: rgba(0, 0, 0, 0.95);
+        color: white;
+        padding: 8px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        
+        .tooltip-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #4CAF50;
+        }
+        
+        .tooltip-info {
+            .tooltip-status {
+                margin-top: 4px;
+                
+                .status-item {
+                    color: #ff9800;
+                    font-weight: 500;
+                    margin-bottom: 2px;
+                    
+                    &:last-child {
+                        margin-bottom: 0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* Free Spectators Section */
+.free-spectators {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    
+    .header {
+        font-weight: bold;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        color: #888;
+        text-transform: uppercase;
+    }
+}
+
+/* Help Tooltip Styling */
+.help-icon {
+    display: inline-block;
+    margin-left: 5px;
+    cursor: help;
+    font-size: 0.8em;
+    color: #bbb;
+    user-select: none;
+}
+
+.help-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 10px;
+    border-radius: 4px;
+    z-index: 1000;
+    max-width: 220px;
+    word-wrap: break-word;
+    margin-top: 5px;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Instructions styling */
+.instructions {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    border-left: 3px solid #9147FF;
+}
+
+/* Theme-specific styles for enhanced features */
+.theme-light {
+    .nospec-player {
+        background: rgba(255, 193, 7, 0.15);
+        
+        .nospec-indicator {
+            color: #f57c00;
+        }
+    }
+    
+    .request-spectate-btn {
+        background: rgba(0, 0, 0, 0.1);
+        border-color: rgba(0, 0, 0, 0.2);
+        
+        &:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        &.cooldown {
+            background: rgba(0, 0, 0, 0.05);
+        }
+    }
+    
+    .player-tooltip {
+        background: rgba(255, 255, 255, 0.98) !important;
+        color: #333 !important;
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+        
+        .tooltip-name {
+            color: #2e7d32 !important;
+        }
+        
+        .status-item {
+            color: #f57c00 !important;
+        }
+    }
+    
+    .help-tooltip {
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+    }
+    
+    .free-spectators .header {
+        color: #666;
+    }
+    
+    .instructions {
+        background: rgba(113, 55, 199, 0.1);
+        color: #444;
+    }
+}
+
+.theme-dark {
+    .nospec-player {
+        background: rgba(255, 193, 7, 0.1);
+        
+        .nospec-indicator {
+            color: #ffb74d;
+        }
+    }
+    
+    .request-spectate-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+        
+        &:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        &.cooldown {
+            background: rgba(255, 255, 255, 0.05);
+        }
+    }
+    
+    .help-tooltip {
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .free-spectators {
+        border-top-color: rgba(255, 255, 255, 0.1);
+        
+        .header {
+            color: #aaa;
+        }
+    }
+    
+    .instructions {
+        background: rgba(145, 71, 255, 0.1);
+        color: #e5e3e8;
+    }
+}
+
+/* Mobile responsiveness */
+@include mq($until: tablet) {
+    .player-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        
+        .request-spectate-btn {
+            align-self: flex-end;
+            margin-left: 0;
+        }
+    }
+    
+    .player-tooltip-container {
+        max-width: 200px;
+        
+        .player-tooltip {
+            white-space: normal;
+            word-wrap: break-word;
+        }
+    }
+    
+    .help-tooltip {
+        max-width: 180px;
+    }
+}
+
+/* Animation for request button cooldown */
+@keyframes cooldown-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.2; }
+}
+
+.request-spectate-btn.cooldown {
+    animation: cooldown-pulse 2s infinite;
 }

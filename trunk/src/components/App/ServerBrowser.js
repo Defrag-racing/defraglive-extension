@@ -27,7 +27,8 @@ class ServerBrowserBase extends React.Component {
             loading: false,
             error: null,
             hoveredPlayer: null,
-            copySuccess: null
+            copySuccess: null,
+            hoveredHelp: null // For question mark tooltip
         }
 
         this.connect_timeout = null
@@ -259,7 +260,7 @@ class ServerBrowserBase extends React.Component {
                             <div 
                                 className={`server-name ${connectable ? 'link' : 'disabled-link'}`}
                                 onClick={() => connectable && this.connectToServer(address, server)}
-                                title={!connectable ? reason : `Connect to ${address}`}
+                                title={`Connect to ${address}`}
                             >
                                 <Q3STR s={server.hostname}/>
                             </div>
@@ -405,12 +406,12 @@ class ServerBrowserBase extends React.Component {
     }
 
     render() {
-        let svgServers = <svg className="serverbrowser-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M0 2C0 .9.9 0 2 0h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm0 6C0 6.9.9 6 2 6h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V8zm0 6C0 12.9.9 12 2 12h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2zM5 2v2h2V2H5zm0 6v2h2V8H5zm0 6v2h2v-2H5z"/></svg>
-        let svgClose = <svg className="serverbrowser-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
+        let svgServers = <svg className="serverbrowser-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" title="Toggle Server Browser"><path d="M0 2C0 .9.9 0 2 0h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm0 6C0 6.9.9 6 2 6h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V8zm0 6C0 12.9.9 12 2 12h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2zM5 2v2h2V2H5zm0 6v2h2V8H5zm0 6v2h2v-2H5z"/></svg>
+        let svgClose = <svg className="serverbrowser-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Server Browser"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
         
         return (
             <div className={`serverbrowser-wrap serverbrowser-${this.props.appstate.isServerBrowserOpen ? 'opened' : 'closed'}`}>
-                <div className="serverbrowser-button" onClick={this.toggle} title="Servers">
+                <div className="serverbrowser-button" onClick={this.toggle} title="Toggle Server Browser">
                     {this.props.appstate.isServerBrowserOpen ? svgClose : svgServers}
                 </div>
                 <div className="serverbrowser-content-wrap">
@@ -418,23 +419,26 @@ class ServerBrowserBase extends React.Component {
                         <div className="header-top">
                             <div className="h1">Server Browser</div>
                             <div className="header-controls">
-                                <div className="refresh-button" onClick={this.refreshServers}>
+                                <div className="refresh-button" onClick={this.refreshServers} title="Refresh Server List">
                                     <svg className="refresh-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
                                 </div>
-                                <div className="close" onClick={this.toggle}>
+                                <div className="close" onClick={this.toggle} title="Close Server Browser">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
                                 </div>
                             </div>
                         </div>
                         <div className="section">
                             <div className="content" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                                <div className="instructions">
+                                    Click a server name to connect. Switch servers by selecting a new one from the list.
+                                </div>
                                 {this.state.loading && (
                                     <div className="loading-message">Loading servers...</div>
                                 )}
                                 {this.state.error && (
                                     <div className="error-message">
                                         {this.state.error}
-                                        <button className="retry-button" onClick={this.refreshServers}>Retry</button>
+                                        <button className="retry-button" onClick={this.refreshServers} title="Retry Loading Servers">Retry</button>
                                     </div>
                                 )}
                                 {!this.state.loading && !this.state.error && Object.keys(this.state.servers).length === 0 && (
@@ -444,7 +448,20 @@ class ServerBrowserBase extends React.Component {
                                     <table className="servers-table">
                                         <thead>
                                             <tr>
-                                                <th style={{ width: '42%' }}>Server</th>
+                                                <th style={{ width: '42%' }}>
+                                                    Server <span 
+                                                        className="help-icon" 
+                                                        onMouseEnter={() => this.setState({ hoveredHelp: 'server' })}
+                                                        onMouseLeave={() => this.setState({ hoveredHelp: null })}
+                                                    >
+                                                        ?
+                                                    </span>
+                                                    {this.state.hoveredHelp === 'server' && (
+                                                        <div className="help-tooltip">
+                                                            Click the server name to connect. Select a different server to switch.
+                                                        </div>
+                                                    )}
+                                                </th>
                                                 <th style={{ width: '58%' }}>Players</th>
                                             </tr>
                                         </thead>

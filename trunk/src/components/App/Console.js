@@ -23,6 +23,8 @@ class ConsoleBase extends React.Component {
             status_message: null,
             messages: [],
             messages_notif: [],
+            scrolledUp: false,
+            newMessages: 0
         }
 
         // input element ref
@@ -41,12 +43,14 @@ class ConsoleBase extends React.Component {
         this.onDisconnect = this.onDisconnect.bind(this)
         this.onError = this.onError.bind(this)
         this.appendMessage = this.appendMessage.bind(this)
+        this.handleScroll = this.handleScroll.bind(this)
 
         this.fetchMessages = this.fetchMessages.bind(this)
         this.onMessageDelete = this.onMessageDelete.bind(this)
+        this.sendWS = this.sendWS.bind(this)
     }
 
-    componentWillUnmount(){
+    componentWillUnmount() {
         document.removeEventListener('keypress', this.onKeyPress)
     }
 
@@ -57,28 +61,33 @@ class ConsoleBase extends React.Component {
         this.fetchMessages()
     }
 
-    fetchMessages() {
-        let date = new Date()
-
-        // fetch('http://localhost:5000/console.json')
-        fetch('https://tw.defrag.racing/console.json')
-        .then((data) => {
-            if(data.ok) {
-                return data.json()
-            }
-            return []
-        })
-        .then((data) => {
-            data.forEach((el) => {
-                el.time = unix2time(el.timestamp)
-            })
-            
-            this.setState({
-                messages: data
-            })
-        })
-        .catch(err => {})
-    }
+	fetchMessages() {
+		fetch('https://tw.defrag.racing/console.json')
+		.then((data) => {
+			if(data.ok) {
+				return data.json()
+			}
+			return []
+		})
+		.then((data) => {
+			const messages = []
+			data.forEach((el) => {
+				// Extract the actual message from the wrapper
+				if (el.action === 'message' && el.message) {
+					const message = el.message
+					if (message.timestamp) {
+						message.time = unix2time(message.timestamp)
+					}
+					messages.push(message)
+				}
+			})
+			
+			this.setState({
+				messages: messages
+			})
+		})
+		.catch(err => {})
+	}
 
     initWebsocket() {
         if(this.ws != null) {
@@ -219,29 +228,51 @@ class ConsoleBase extends React.Component {
                 // Focus on the input
                 this.inputEl.current.focus()
 
-                // Keep the scrollbar at the bottom
-                this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight - this.scrollerEl.current.clientHeight
+                // Keep the scrollbar at the bottom if not scrolled up
+                if (this.scrollerEl.current && !this.state.scrolledUp) {
+                    this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight - this.scrollerEl.current.clientHeight
+                }
             }
         }, 50)
     }
 
     appendMessage(new_msg) {
-        this.state.messages.push(new_msg)
-        this.setState({
-            messages: this.state.messages
-        }, () => {
-            this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight - this.scrollerEl.current.clientHeight
-        })
-
-        // Notifications
-        if(this.state.messages_notif.length >= 3) {
-            this.state.messages_notif.shift()
+        new_msg.timestamp = new_msg.timestamp || (new Date().getTime() / 1000)
+        new_msg.time = new_msg.time || unix2time(new_msg.timestamp)
+        
+        if(new_msg.type === 'SAY' && !new_msg.author) {
+            new_msg.author = this.props.serverstate.current_player.n
         }
 
-        this.state.messages_notif.push(new_msg)
-        this.setState({
-            messages_notif: this.state.messages_notif //.slice(Math.max(this.state.messages_notif.length - 3, 1))
+        this.setState(prevState => {
+            const updatedMessages = [...prevState.messages, new_msg]
+            const updatedNotif = new_msg.type === 'SAY' ? [...prevState.messages_notif, new_msg] : prevState.messages_notif
+            if (prevState.scrolledUp) {
+                return {
+                    messages: updatedMessages,
+                    messages_notif: updatedNotif,
+                    newMessages: prevState.newMessages + 1
+                }
+            }
+            return {
+                messages: updatedMessages,
+                messages_notif: updatedNotif.length > 3 ? updatedNotif.slice(-3) : updatedNotif
+            }
+        }, () => {
+            if (this.scrollerEl.current && !this.state.scrolledUp) {
+                this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight
+            }
         })
+    }
+
+    handleScroll() {
+        if (!this.scrollerEl.current) return
+        const { scrollTop, scrollHeight, clientHeight } = this.scrollerEl.current
+        const isScrolledUp = scrollHeight > clientHeight && scrollTop + clientHeight < scrollHeight - 10
+        this.setState(prevState => ({
+            scrolledUp: isScrolledUp,
+            newMessages: isScrolledUp ? prevState.newMessages : 0
+        }))
     }
 
     submitMessage(e, inputEl) {
@@ -302,8 +333,11 @@ class ConsoleBase extends React.Component {
             return false
         }
 
-        this.inputEl.current.value = ''
-        this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight - this.scrollerEl.current.clientHeight
+        if (inputEl) inputEl.value = ''
+        else this.inputEl.current.value = ''
+        if (this.scrollerEl.current && !this.state.scrolledUp) {
+            this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight
+        }
 
         return true
     }
@@ -378,11 +412,13 @@ class ConsoleBase extends React.Component {
         }
 
         // Send a new console message (if the input element is focused)
-        // if(!this.props.appstate.isConsoleOpen) {
-        //     if(key === 'KeyT') {
-        //         console.log('say should open')
-        //     }
-        // }
+        if(this.props.appstate.isConsoleOpen) {
+            if(key === 'Enter' || key === 'NumpadEnter') {
+                e.preventDefault()
+                this.onSubmit(e)
+                return
+            }
+        }
         return true
     }
 
@@ -402,35 +438,40 @@ class ConsoleBase extends React.Component {
 
     render() {
         let statusMessage = this.state.status_message !== null ? <Message type={this.state.status_message.type} message={this.state.status_message.message}/> : null
-        let svgClose = <svg className="say-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
+        let svgClose = <svg className="say-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Console"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
         let canModerate = (this.props.twitchUser.role == 'broadcaster' || this.props.twitchUser.is_mod) ? true : false
 
         return (
             <>
-                <div className="console-button" onClick={this.toggleConsole}>~</div>
-                <div className="console-wrap">
+                <div className="console-button" onClick={this.toggleConsole} title="Toggle Console">~</div>
+                <div className={`console-wrap console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'}`}>
                     <div className="console-content-wrap">
-                        <div className="console-scroller" ref={this.scrollerEl}>
+                        <div className="console-scroller" ref={this.scrollerEl} onScroll={this.handleScroll}>
                             <div className="rows-wrap">
                                 <div className="row-intro">
-                                    <div className="title">Welcome to the Twitch ✕ Defrag  Interactive Console!</div>
+                                    <div className="title">Welcome to the Twitch ✕ Defrag Interactive Console!</div>
                                     It allows you to chat directly with the players and other viewers. Have fun!<br/>
                                     <div className="meta">There is moderation in place. Viewer discretion is advised.<br/></div>
                                 </div>
                                 {this.state.messages.map((val) => {
                                     return <Row key={val.id} data={val} canModerate={canModerate} onMessageDelete={this.onMessageDelete} />
                                 })}
+                                {this.state.newMessages > 0 && (
+                                    <div className="new-message-popup">
+                                        New messages ({this.state.newMessages}) - Scroll down to view
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                     <form action="send" className="console-input-wrap" onSubmit={this.onSubmit}>
-                        <div className="close-console-button" onClick={this.toggleConsole}>{svgClose}</div>
+                        <div className="close-console-button" onClick={this.toggleConsole} title="Close Console">{svgClose}</div>
                         <div className="input-element-wrap">
                             {statusMessage}
-                            <input type="text" className="input" ref={this.inputEl}/>
+                            <input type="text" className="input" ref={this.inputEl} title="Type your message here" />
                         </div>
                         <div className="submit-button-wrap">
-                            <input type="submit" className="submit-button" value="Send"/>
+                            <input type="submit" className="submit-button" value="Send" title="Send Message" />
                         </div>
                     </form>
                 </div>
