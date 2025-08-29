@@ -329,7 +329,7 @@ class ServerBrowserBase extends React.Component {
                                         <div key={player.clientId} className="player-group">
                                             <div 
                                                 className="player-name-container"
-                                                onMouseEnter={() => { console.log('Hover on', player.name); this.setState({ hoveredPlayer: player }); }}
+                                                onMouseEnter={() => this.setState({ hoveredPlayer: player })}
                                                 onMouseLeave={() => this.setState({ hoveredPlayer: null })}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''}`}>
@@ -351,7 +351,7 @@ class ServerBrowserBase extends React.Component {
                                                 <div 
                                                     key={spec.clientId} 
                                                     className="player-name-container spectator"
-                                                    onMouseEnter={() => { console.log('Hover on', spec.name); this.setState({ hoveredPlayer: spec }); }}
+                                                    onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
                                                     onMouseLeave={() => this.setState({ hoveredPlayer: null })}
                                                 >
                                                     <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
@@ -376,7 +376,7 @@ class ServerBrowserBase extends React.Component {
                                             <div 
                                                 key={spec.clientId} 
                                                 className="player-name-container"
-                                                onMouseEnter={() => { console.log('Hover on', spec.name); this.setState({ hoveredPlayer: spec }); }}
+                                                onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
                                                 onMouseLeave={() => this.setState({ hoveredPlayer: null })}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
