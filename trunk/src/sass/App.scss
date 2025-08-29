@@ -140,7 +140,6 @@ body {
     }
 }
 
-
 // -----------------------------------------------------
 // --- Mobile
 // -----------------------------------------------------
@@ -169,7 +168,6 @@ body {
     }
 }
 
-
 // -----------------------------------------------------
 // --- Theme
 // -----------------------------------------------------
@@ -184,7 +182,6 @@ body {
     .console-wrap {
         background-color: rgba(230, 230, 235, 0.9);
         background-image: url('../img/q3logo_5p.png');
-        // border-bottom: 3px solid rgb(218, 84, 84);
         box-shadow: rgba(0, 0, 0, 0.8) 0px 5px 60px;
         border-bottom-width: 3px;
         border-bottom-style: solid;
@@ -234,10 +231,16 @@ body {
     .input {
         background-color: rgba(#E5E5E5, 0.7);
         color: #111;
+    }
 
-        // &:focus {
-        //     border-color: #CCCCCC;
-        // }
+    .font-size-btn {
+        background: rgba(0, 0, 0, 0.1);
+        border-color: rgba(0, 0, 0, 0.3);
+        color: #333;
+        
+        &:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
     }
 
     .playerlist-content {
@@ -250,6 +253,16 @@ body {
             }
             .close svg {
                 fill:rgb(100, 100, 100);
+            }
+        }
+
+        .afk-control-btn {
+            background: rgba(0, 0, 0, 0.1);
+            border-color: rgba(0, 0, 0, 0.3);
+            color: #333;
+            
+            &:hover:not(.cooldown) {
+                background: rgba(0, 0, 0, 0.2);
             }
         }
     }
@@ -278,6 +291,26 @@ body {
             }
         }
     }
+
+    .font-size-controls-input {
+        .font-size-btn {
+            background: rgba(0, 0, 0, 0.1);
+            border-color: rgba(0, 0, 0, 0.3);
+            color: #333;
+            
+            &:hover {
+                background: rgba(0, 0, 0, 0.2);
+            }
+            
+            &.increase {
+                color: #2E7D32;
+            }
+            
+            &.decrease {
+                color: #F57C00;
+            }
+        }
+    }
 }
 
 .theme-dark {
@@ -290,9 +323,7 @@ body {
     .console-wrap {
         background-color: rgba(30, 30, 35, 0.9);
         background-image: url('../img/q3logo_20p.png');
-        // background-image: url('console01.jpg');
         box-shadow: rgba(0, 0, 0, 0.8) 0px 5px 60px;
-        // border-bottom: 2px solid #303032;
         border-bottom-width: 3px;
         border-bottom-style: solid;
         border-image-slice: 1;
@@ -300,8 +331,6 @@ body {
     }
 
     .row {
-        // border-color: #464649 !important;
-
         &.-announce {
             .message {
                 color: #fff;
@@ -344,10 +373,16 @@ body {
     .input {
         background-color: rgba(#5E5E60, 0.7);
         color: #fff;
+    }
 
-        // &:focus {
-        //     border-color: #5E5E60;
-        // }
+    .font-size-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.3);
+        color: #fff;
+        
+        &:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
     }
 
     .playerlist-content {
@@ -360,6 +395,16 @@ body {
             }
             .close svg {
                 fill:rgb(100, 100, 100);
+            }
+        }
+
+        .afk-control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+            
+            &:hover:not(.cooldown) {
+                background: rgba(255, 255, 255, 0.2);
             }
         }
     }
@@ -388,8 +433,19 @@ body {
             }
         }
     }
-}
 
+    .font-size-controls-input {
+        .font-size-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #fff;
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+        }
+    }
+}
 
 // -----------------------------------------------------
 // --- Button
@@ -442,12 +498,57 @@ body {
 .console-wrap {
     display: flex;
     flex-wrap: wrap;
-    // justify-content: stretch;
     flex-direction: column;
     position: relative;
     z-index: 5;
-    // font-family: 'Exo 2';
     height: 400px;
+
+    &.font-small {
+        .row {
+            font-size: 0.8rem;
+            padding: 1px 8px;
+            
+            .timestamp { font-size: 0.7rem; }
+            .player-name { font-size: 0.8rem; }
+            .message { font-size: 0.8rem; }
+        }
+        
+        .row-intro {
+            font-size: 0.9rem;
+            .title { font-size: 1.0rem; }
+            .meta { font-size: 0.8rem; }
+        }
+    }
+    
+    &.font-large {
+        .row {
+            font-size: 1.2rem;
+            padding: 4px 12px;
+            
+            .timestamp { font-size: 1.0rem; }
+            .player-name { font-size: 1.2rem; }
+            .message { font-size: 1.2rem; }
+        }
+        
+        .row-intro {
+            font-size: 1.3rem;
+            .title { font-size: 1.5rem; }
+            .meta { font-size: 1.1rem; }
+        }
+    }
+}
+
+.console-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 5px 10px 0;
+    position: relative;
+    z-index: 10;
+    
+    // Hide the old font size controls
+    .font-size-controls {
+        display: none;
+    }
 }
 
 .console-content-wrap {
@@ -521,7 +622,6 @@ body {
     .player-name {
         white-space: nowrap;
         padding-right: 5px;
-        // font-weight: bold;
         height: 23px;
         line-height: 23px;
 
@@ -589,11 +689,11 @@ body {
         flex-grow: 2;
         box-sizing: border-box;
         position: relative;
+        // Reduce width to make space for font controls
+        width: 85%;
     }
 
     .input {
-        // border-width: 2px;
-        // border-style: solid;
         border: none;
         padding: 8px 10px;
         outline: 0;
@@ -604,6 +704,43 @@ body {
         box-sizing: border-box;
         position: relative;
         z-index: 3;
+    }
+
+    // New font size controls in the input area
+    .font-size-controls-input {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        margin: 0 8px;
+        
+        .font-size-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            min-width: 24px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.2);
+                transform: scale(1.05);
+            }
+            
+            &.increase {
+                color: #4CAF50;
+            }
+            
+            &.decrease {
+                color: #ff9800;
+            }
+        }
     }
 
     .submit-button-wrap {
@@ -767,9 +904,6 @@ body {
     width: 100%;
     min-height: 100px;
     padding: 5px;
-    // display: flex;
-    // flex-wrap: nowrap;
-    // align-items: flex-start;
     border-bottom: 1px solid transparent;
     box-sizing: border-box;
 
@@ -788,9 +922,6 @@ body {
     .player-name {
         white-space: nowrap;
         padding-right: 5px;
-        // font-weight: bold;
-        // height: 30px;
-        // line-height: 30px;
 
         @include mq($until: tablet) {
             max-width: 50%;
@@ -868,8 +999,6 @@ body {
     display: none;
 
     .notify-input {
-        // border-width: 2px;
-        // border-style: solid;
         border: none;
         padding: 8px 10px;
         outline: 0;
@@ -935,8 +1064,6 @@ body {
     position: absolute;
     left: 15px;
     top: 0;
-    // width: 100vw;
-    // height: 100%;
     min-height: 200px;
     z-index: 3;
 
@@ -977,7 +1104,6 @@ body {
     left: 50px;
     top: 0;
     width: 30%;
-    // height: 100%;
     min-width: 300px;
     padding: 100px 0 5rem 0;
     display: flex;
@@ -1008,10 +1134,74 @@ body {
         margin-bottom: 10px;
         display: flex;
         justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
 
         .h1 {
             font-size: 1.8rem;
             font-weight: 200;
+            flex: 1;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .spectate-next-button {
+            cursor: pointer;
+            transition: transform $duration-fast02 $motion-entrance-productive;
+            opacity: 0.8;
+
+            &:hover {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+
+            .spectate-next-svg {
+                width: 18px;
+                height: 18px;
+                fill: currentColor;
+            }
+        }
+
+        .afk-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .afk-control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            padding: 3px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: all 0.2s ease;
+            min-width: 28px;
+            height: 22px;
+            
+            &:hover:not(.cooldown) {
+                background: rgba(255, 255, 255, 0.2);
+                transform: scale(1.05);
+            }
+            
+            &.reset {
+                color: #ff9800;
+            }
+            
+            &.extend {
+                color: #4CAF50;
+            }
+            
+            &.cooldown {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
         }
 
         .close {
@@ -1023,8 +1213,8 @@ body {
             }
 
             svg {
-                width: 25px;
-                height: 25px;
+                width: 20px;
+                height: 20px;
             }
         }
     }
@@ -1097,6 +1287,7 @@ body {
         white-space: normal;
     }
 }
+
 // -----------------------------------------------------------------
 // - Server Browser
 // -----------------------------------------------------------------
@@ -1132,7 +1323,7 @@ body {
     .serverbrowser-button {
         position: absolute;
         left: 0;
-        top: 260px; // Position below player list button
+        top: 260px;
         width: 30px;
         height: 30px;
         font-size: 1.5rem;
@@ -1294,7 +1485,6 @@ body {
         opacity: 0.5;
     }
 
-    // Column width adjustments
     th:first-child, td:first-child {
         width: 45%;
     }
@@ -1719,21 +1909,21 @@ body {
 
 // Spectator and Player Grouping Styling
 .player-group {
-    margin-bottom: 5px; /* Space between player groups */
+    margin-bottom: 5px;
 }
 
 .player-name-container {
-    display: block; /* Force new line for each player/spectator */
-    margin-bottom: 2px; /* Small gap between lines */
+    display: block;
+    margin-bottom: 2px;
 }
 
 .spectator {
-    padding-left: 20px; /* Indent spectators */
+    padding-left: 20px;
     font-style: italic;
 }
 
 .free-spectators {
-    margin-top: 10px; /* Space before free spectators */
+    margin-top: 10px;
 }
 
 .free-spectators .player-name::after {
@@ -1751,33 +1941,33 @@ body {
     border-radius: 3px;
     top: 35px;
     left: 0;
-    z-index: 10; /* Ensure it appears above other elements */
+    z-index: 10;
 }
 
 // Tooltip and Overflow Fixes
 .player-tooltip-container {
     position: absolute;
-    z-index: 20; /* Above hover text */
-    max-width: 200px; /* Prevent tooltip overflow */
-    word-wrap: break-word; /* Handle long names */
-    background: rgba(0, 0, 0, 0.9); /* Ensure visibility */
-    padding: 5px; /* Add padding for readability */
+    z-index: 20;
+    max-width: 200px;
+    word-wrap: break-word;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 5px;
 }
 
 .players-list {
-    max-height: 300px; /* Increased height for more content */
-    overflow-y: auto; /* Scroll if needed */
-    padding-right: 10px; /* Space for scrollbar */
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px;
 }
 
 .servers-table {
-    width: 100%; /* Ensure table fills container */
-    table-layout: fixed; /* Fixed layout for column widths */
+    width: 100%;
+    table-layout: fixed;
 }
 
 .content {
-    max-height: calc(100vh - 200px); /* Constrain height for scrolling */
-    overflow-y: auto; /* Enable scrolling for the entire content area */
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
 }
 
 // Help Tooltip Styling
@@ -1822,6 +2012,7 @@ body {
     background: rgba(0, 0, 0, 0.1);
     border-radius: 3px;
 }
+
 /* Enhanced PlayerList Styles - Add to existing App.scss */
 
 /* Player Row Container */

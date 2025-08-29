@@ -24,7 +24,8 @@ class ConsoleBase extends React.Component {
             messages: [],
             messages_notif: [],
             scrolledUp: false,
-            newMessages: 0
+            newMessages: 0,
+            fontSize: 'normal' // 'small', 'normal', 'large'
         }
 
         // input element ref
@@ -48,6 +49,26 @@ class ConsoleBase extends React.Component {
         this.fetchMessages = this.fetchMessages.bind(this)
         this.onMessageDelete = this.onMessageDelete.bind(this)
         this.sendWS = this.sendWS.bind(this)
+        
+        // Font size methods
+        this.increaseFontSize = this.increaseFontSize.bind(this)
+        this.decreaseFontSize = this.decreaseFontSize.bind(this)
+    }
+
+    increaseFontSize() {
+        if (this.state.fontSize === 'small') {
+            this.setState({ fontSize: 'normal' })
+        } else if (this.state.fontSize === 'normal') {
+            this.setState({ fontSize: 'large' })
+        }
+    }
+
+    decreaseFontSize() {
+        if (this.state.fontSize === 'large') {
+            this.setState({ fontSize: 'normal' })
+        } else if (this.state.fontSize === 'normal') {
+            this.setState({ fontSize: 'small' })
+        }
     }
 
     componentWillUnmount() {
@@ -61,33 +82,33 @@ class ConsoleBase extends React.Component {
         this.fetchMessages()
     }
 
-	fetchMessages() {
-		fetch('https://tw.defrag.racing/console.json')
-		.then((data) => {
-			if(data.ok) {
-				return data.json()
-			}
-			return []
-		})
-		.then((data) => {
-			const messages = []
-			data.forEach((el) => {
-				// Extract the actual message from the wrapper
-				if (el.action === 'message' && el.message) {
-					const message = el.message
-					if (message.timestamp) {
-						message.time = unix2time(message.timestamp)
-					}
-					messages.push(message)
-				}
-			})
-			
-			this.setState({
-				messages: messages
-			})
-		})
-		.catch(err => {})
-	}
+    fetchMessages() {
+        fetch('https://tw.defrag.racing/console.json')
+        .then((data) => {
+            if(data.ok) {
+                return data.json()
+            }
+            return []
+        })
+        .then((data) => {
+            const messages = []
+            data.forEach((el) => {
+                // Extract the actual message from the wrapper
+                if (el.action === 'message' && el.message) {
+                    const message = el.message
+                    if (message.timestamp) {
+                        message.time = unix2time(message.timestamp)
+                    }
+                    messages.push(message)
+                }
+            })
+            
+            this.setState({
+                messages: messages
+            })
+        })
+        .catch(err => {})
+    }
 
     initWebsocket() {
         if(this.ws != null) {
@@ -436,52 +457,76 @@ class ConsoleBase extends React.Component {
         return true
     }
 
-    render() {
-        let statusMessage = this.state.status_message !== null ? <Message type={this.state.status_message.type} message={this.state.status_message.message}/> : null
-        let svgClose = <svg className="say-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Console"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
-        let canModerate = (this.props.twitchUser.role == 'broadcaster' || this.props.twitchUser.is_mod) ? true : false
+render() {
+    let statusMessage = this.state.status_message !== null ? <Message type={this.state.status_message.type} message={this.state.status_message.message}/> : null
+    let svgClose = <svg className="say-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Console"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
+    let canModerate = (this.props.twitchUser.role == 'broadcaster' || this.props.twitchUser.is_mod) ? true : false
 
-        return (
-            <>
-                <div className="console-button" onClick={this.toggleConsole} title="Toggle Console">~</div>
-                <div className={`console-wrap console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'}`}>
-                    <div className="console-content-wrap">
-                        <div className="console-scroller" ref={this.scrollerEl} onScroll={this.handleScroll}>
-                            <div className="rows-wrap">
-                                <div className="row-intro">
-                                    <div className="title">Welcome to the Twitch ✕ Defrag Interactive Console!</div>
-                                    It allows you to chat directly with the players and other viewers. Have fun!<br/>
-                                    <div className="meta">There is moderation in place. Viewer discretion is advised.<br/></div>
-                                </div>
-                                {this.state.messages.map((val) => {
-                                    return <Row key={val.id} data={val} canModerate={canModerate} onMessageDelete={this.onMessageDelete} />
-                                })}
-                                {this.state.newMessages > 0 && (
-                                    <div className="new-message-popup">
-                                        New messages ({this.state.newMessages}) - Scroll down to view
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <form action="send" className="console-input-wrap" onSubmit={this.onSubmit}>
-                        <div className="close-console-button" onClick={this.toggleConsole} title="Close Console">{svgClose}</div>
-                        <div className="input-element-wrap">
-                            {statusMessage}
-                            <input type="text" className="input" ref={this.inputEl} title="Type your message here" />
-                        </div>
-                        <div className="submit-button-wrap">
-                            <input type="submit" className="submit-button" value="Send" title="Send Message" />
-                        </div>
-                    </form>
-                </div>
-                <NotifyLines onSubmit={this.submitMessage} console={this.state}/>
-                <PlayerList sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
-                <ServerBrowser sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
-                <CurrentPlayerName/>
-            </>
-        )
-    }
+    return (
+			<>
+				<div className="console-button" onClick={this.toggleConsole} title="Toggle Console">~</div>
+				<div className={`console-wrap console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'} font-${this.state.fontSize}`}>
+					<div className="console-content-wrap">
+						<div className="console-scroller" ref={this.scrollerEl} onScroll={this.handleScroll}>
+							<div className="rows-wrap">
+								<div className="row-intro">
+									<div className="title">Welcome to the Twitch ✕ Defrag Interactive Console!</div>
+									It allows you to chat directly with the players and other viewers. Have fun!<br/>
+									<div className="meta">There is moderation in place. Viewer discretion is advised.<br/></div>
+								</div>
+								{this.state.messages.map((val) => {
+									return <Row key={val.id} data={val} canModerate={canModerate} onMessageDelete={this.onMessageDelete} />
+								})}
+								{this.state.newMessages > 0 && (
+									<div className="new-message-popup">
+										New messages ({this.state.newMessages}) - Scroll down to view
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+					<form action="send" className="console-input-wrap" onSubmit={this.onSubmit}>
+						<div className="close-console-button" onClick={this.toggleConsole} title="Close Console">{svgClose}</div>
+						<div className="input-element-wrap">
+							{statusMessage}
+							<input type="text" className="input" ref={this.inputEl} title="Type your message here" />
+						</div>
+						
+						{/* New font size controls between input and send button */}
+						<div className="font-size-controls-input">
+							{this.state.fontSize !== 'small' && (
+								<button 
+									type="button"
+									className="font-size-btn decrease" 
+									onClick={this.decreaseFontSize}
+									title="Decrease font size"
+								>
+									A⁻
+								</button>
+							)}
+							{this.state.fontSize !== 'large' && (
+								<button 
+									type="button"
+									className="font-size-btn increase" 
+									onClick={this.increaseFontSize}
+									title="Increase font size"
+								>
+									A⁺
+								</button>
+							)}
+						</div>
+						
+						<div className="submit-button-wrap">
+							<input type="submit" className="submit-button" value="Send" title="Send Message" />
+						</div>
+					</form>
+				</div>
+				<NotifyLines onSubmit={this.submitMessage} console={this.state}/>
+				<PlayerList sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
+				<ServerBrowser sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
+				<CurrentPlayerName/>
+			</>
+		)
+	}
 }
-
 export const Console = connect(mapState, mapDispatch)(ConsoleBase)

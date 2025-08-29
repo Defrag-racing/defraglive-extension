@@ -209,9 +209,9 @@ class ServerBrowserBase extends React.Component {
             statuses.push('No Spectating Enabled')
         }
 
-        if (player.follow_num && player.follow_num !== -1) {
-            statuses.push(`Spectating Player ID ${player.follow_num}`)
-        }
+        //if (player.follow_num && player.follow_num !== -1) {
+        //    statuses.push(`Spectating Player ID ${player.follow_num}`)
+        //}
 
         return statuses
     }
