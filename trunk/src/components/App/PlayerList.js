@@ -18,6 +18,15 @@ const PHYSICS = {
     '1': 'CPM',
 }
 
+const PHYSICS_TYPES = {
+    'vq3': 'VQ3',
+    'cpm': 'CPM',
+    'cpm.1': 'CPM FC',
+    'cpm.2': 'CPM FC',
+    'cpm-ctf2': 'CPM CTF',
+    'vq3.7': 'VQ3 FS',
+}
+
 export function PlayerListLoader(props) {
     return (
         <div style={{'color': 'red'}}>Loading...</div>
@@ -32,7 +41,11 @@ class PlayerListBase extends React.Component {
             hoveredPlayer: null,
             hoveredHelp: null,
             requestCooldowns: new Map(),
-            afkControlCooldown: 0
+            afkControlCooldown: 0,
+            copySuccess: null,
+            currentServerAddress: null,
+            serverInfo: null,
+            serverName: null
         }
 
         this.spec_timeout = null
@@ -43,15 +56,57 @@ class PlayerListBase extends React.Component {
         this.requestSpectate = this.requestSpectate.bind(this)
         this.handleAfkReset = this.handleAfkReset.bind(this)
         this.handleAfkExtend = this.handleAfkExtend.bind(this)
+        this.copyToClipboard = this.copyToClipboard.bind(this)
+        this.fallbackCopyTextToClipboard = this.fallbackCopyTextToClipboard.bind(this)
+        this.fetchServerData = this.fetchServerData.bind(this)
     }
 
     componentDidMount() {
         this.props.getServerstate()
+        this.fetchServerData()
+    }
+
+    componentDidUpdate(prevProps) {
+        // Refetch server data when serverstate changes or when opening player list
+        if (prevProps.serverstate !== this.props.serverstate ||
+            (!prevProps.appstate.isPlayerlistOpen && this.props.appstate.isPlayerlistOpen)) {
+            this.fetchServerData()
+        }
+    }
+
+    async fetchServerData() {
+        try {
+            // First get current server IP from bot
+            const serverstateResponse = await fetch('https://tw.defrag.racing/serverstate.json')
+            const serverstate = await serverstateResponse.json()
+            
+            if (!serverstate.ip) {
+                return
+            }
+            
+            // Then get full server details from servers API
+            const serversResponse = await fetch('https://defrag.racing/servers/json')
+            const serversData = await serversResponse.json()
+            
+            const currentServerInfo = serversData.active?.[serverstate.ip]
+            
+            this.setState({
+                currentServerAddress: serverstate.ip,
+                serverInfo: currentServerInfo || {},
+                serverName: serverstate.hostname || currentServerInfo?.hostname || 'Unknown'
+            })
+            
+        } catch (error) {
+            console.error('Error fetching server data:', error)
+        }
     }
 
     toggle() {
         this.props.getServerstate()
         this.props.togglePlayerlist()
+        if (!this.props.appstate.isPlayerlistOpen) {
+            this.fetchServerData()
+        }
     }
 
     spectatePlayerID(id) {
@@ -148,6 +203,48 @@ class PlayerListBase extends React.Component {
         this.setState({ afkControlCooldown: Date.now() + 5000 })
     }
 
+    copyToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.setState({ copySuccess: text })
+                setTimeout(() => {
+                    this.setState({ copySuccess: null })
+                }, 2000)
+            }).catch(() => {
+                this.fallbackCopyTextToClipboard(text)
+            })
+        } else {
+            this.fallbackCopyTextToClipboard(text)
+        }
+    }
+
+    fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea")
+        textArea.value = text
+        
+        textArea.style.top = "0"
+        textArea.style.left = "0"
+        textArea.style.position = "fixed"
+        
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        
+        try {
+            const successful = document.execCommand('copy')
+            if (successful) {
+                this.setState({ copySuccess: text })
+                setTimeout(() => {
+                    this.setState({ copySuccess: null })
+                }, 2000)
+            }
+        } catch (err) {
+            console.error('Fallback copy failed', err)
+        }
+        
+        document.body.removeChild(textArea)
+    }
+
     getPlayerWithScores() {
         const players = Object.values(this.props.serverstate.players || {})
         const scores = this.props.serverstate.scores?.players || []
@@ -222,7 +319,7 @@ class PlayerListBase extends React.Component {
 
     render() {
         const svgPlayers = <svg className="playerlist-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" title="Toggle Player List"><path d="M10 .4C4.697.4.399 4.698.399 10A9.6 9.6 0 0 0 10 19.601c5.301 0 9.6-4.298 9.6-9.601 0-5.302-4.299-9.6-9.6-9.6zm.896 3.466c.936 0 1.211.543 1.211 1.164 0 .775-.62 1.492-1.679 1.492-.886 0-1.308-.445-1.282-1.164 0-.621.396-1.492 1.75-1.492zm-1.75 8.727c-2.066 0-3.744-1.678-3.744-3.744s1.678-3.744 3.744-3.744 3.744 1.678 3.744 3.744-1.678 3.744-3.744 3.744zm0-6.008c-1.392 0-2.523 1.132-2.523 2.523s1.132 2.523 2.523 2.523 2.523-1.132 2.523-2.523-1.131-2.523-2.523-2.523z"/></svg>
-        let svgClose = <svg className="playerlist-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Player List"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
+        let svgClose = <svg className="playerlist-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Player List"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
         
         const playersWithScores = this.getPlayerWithScores()
         const activePlayers = playersWithScores.filter(player => player.follow_num === -1)
@@ -233,6 +330,14 @@ class PlayerListBase extends React.Component {
         )
 
         const isOnAfkCooldown = Date.now() < this.state.afkControlCooldown
+
+        // Use server data from API calls
+        const serverAddress = this.state.currentServerAddress || 'Unknown'
+        const serverName = this.state.serverName || 'Unknown Server'
+        const serverMap = this.props.serverstate.mapname || 'Unknown'
+        const serverPhysics = this.state.serverInfo?.defrag ? 
+                            (PHYSICS_TYPES[this.state.serverInfo.defrag] || this.state.serverInfo.defrag.toUpperCase()) : 
+                            (this.props.serverstate.df_promode === '1' ? 'CPM' : 'VQ3')
 
         return (
             <div className={`playerlist-wrap playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'}`}>
@@ -274,8 +379,62 @@ class PlayerListBase extends React.Component {
                                 </div>
                             </div>
                         </div>
+
+                        <div className="section server-info-section">
+                            <div className="header">Current Server</div>
+                            <div className="content">
+                                <div className="server-details">
+                                    <div className="detail-row">
+                                        <span className="server-name-display">
+                                            <Q3STR s={serverName}/>
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="detail-row">
+                                        <span className="server-address">{serverAddress}</span>
+                                        <button 
+                                            className={`copy-button-small ${this.state.copySuccess === serverAddress ? 'copied' : ''}`}
+                                            onClick={() => this.copyToClipboard(serverAddress)}
+                                            title="Copy IP address"
+                                        >
+                                            📋
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="detail-row">
+                                        <span className="server-map">
+                                            Map: <a 
+                                                href={`https://defrag.racing/maps/${serverMap}`} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Q3STR s={serverMap}/>
+                                            </a>
+                                        </span>
+                                        <button 
+                                            className={`copy-button-small ${this.state.copySuccess === serverMap ? 'copied' : ''}`}
+                                            onClick={() => this.copyToClipboard(serverMap)}
+                                            title="Copy map name"
+                                        >
+                                            📋
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="detail-row">
+                                        <span className="server-physics">
+                                            {serverPhysics}
+                                        </span>
+                                        <span className="player-count-inline">
+                                            Players: {Object.keys(this.props.serverstate.players || {}).length}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div className="section">
-                            <div className="content" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
+                            <div className="content" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
                                 <div className="instructions">
                                     Click a player name to switch spectator POV. Or use twitch chat with "?n" to cycle through players. Players with 🙏 have nospec enabled - click the icon to request spectating.
                                 </div>

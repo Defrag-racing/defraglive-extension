@@ -265,6 +265,29 @@ body {
                 background: rgba(0, 0, 0, 0.2);
             }
         }
+
+        .server-info-section {
+            border-bottom-color: rgba(0, 0, 0, 0.1);
+            
+            .server-details {
+                .copy-button-small {
+                    background: rgba(0, 0, 0, 0.1);
+                    border-color: rgba(0, 0, 0, 0.2);
+                    
+                    &:hover {
+                        background: rgba(0, 0, 0, 0.2);
+                    }
+                }
+
+                .server-map a {
+                    color: rgb(38, 79, 137);
+                    
+                    &:hover {
+                        color: rgb(34, 104, 201);
+                    }
+                }
+            }
+        }
     }
 
     .playerlist-content-wrap {
@@ -405,6 +428,29 @@ body {
             
             &:hover:not(.cooldown) {
                 background: rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        .server-info-section {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+            
+            .server-details {
+                .copy-button-small {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-color: rgba(255, 255, 255, 0.2);
+                    
+                    &:hover {
+                        background: rgba(255, 255, 255, 0.2);
+                    }
+                }
+
+                .server-map a {
+                    color: rgb(83, 151, 246);
+                    
+                    &:hover {
+                        color: rgb(23, 119, 254);
+                    }
+                }
             }
         }
     }
@@ -1256,6 +1302,94 @@ body {
 
         &:hover {
             text-decoration: underline;
+        }
+    }
+	    .server-info-section {
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        
+        .server-details {
+            .server-name-display {
+                font-weight: bold;
+                font-size: 1.0rem;
+                margin-bottom: 5px;
+                display: block;
+            }
+            
+            .detail-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 4px;
+                
+                &:last-child {
+                    margin-bottom: 0;
+                }
+                
+                .server-address {
+                    font-family: monospace;
+                    font-weight: bold;
+                    font-size: 0.85rem;
+                }
+                
+                .server-map {
+                    font-size: 0.85rem;
+                    
+                    .map-name {
+                        font-weight: 500;
+                    }
+
+                    a {
+                        text-decoration: none;
+                        
+                        &:hover {
+                            text-decoration: underline;
+                        }
+                    }
+                }
+                
+                .server-physics {
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    font-size: 0.8rem;
+                }
+                
+                .player-count-inline {
+                    font-size: 0.8rem;
+                    opacity: 0.8;
+                    font-weight: 500;
+                }
+                
+                .copy-button-small {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    color: inherit;
+                    padding: 2px 5px;
+                    border-radius: 3px;
+                    cursor: pointer;
+                    font-size: 0.7rem;
+                    transition: all 0.2s ease;
+                    margin-left: 8px;
+                    display: flex;
+                    align-items: center;
+                    
+                    &:hover {
+                        background: rgba(255, 255, 255, 0.2);
+                        transform: scale(1.1);
+                    }
+                    
+                    &.copied {
+                        background: #4CAF50;
+                        color: white;
+                    }
+                    
+                    svg {
+                        width: 12px;
+                        height: 12px;
+                    }
+                }
+            }
         }
     }
 }
