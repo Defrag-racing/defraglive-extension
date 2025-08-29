@@ -254,43 +254,43 @@ class ServerBrowserBase extends React.Component {
 
         return (
             <tr key={address} className={`${playerCount > 0 ? 'has-players' : 'empty'} ${!connectable ? 'not-connectable' : ''}`}>
-                <td style={{ width: '42%' }}>
-                    <div className="server-info">
-                        <div className="server-name-row">
-                            <div 
-                                className={`server-name ${connectable ? 'link' : 'disabled-link'}`}
-                                onClick={() => connectable && this.connectToServer(address, server)}
-                                title={`Connect to ${address}`}
-                            >
-                                <Q3STR s={server.hostname}/>
-                            </div>
-                        </div>
-                        
-                        <div className="server-details">
-                            <div className="detail-row">
-                                <span className="server-address">{address}</span>
-                                <button 
-                                    className={`copy-button-small ${this.state.copySuccess === address ? 'copied' : ''}`}
-                                    onClick={() => this.copyToClipboard(address)}
-                                    title="Copy IP address"
-                                >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                                    </svg>
-                                </button>
-                            </div>
-                            
-                            <div className="detail-row">
-                                <span className="server-map">
-                                    Map: <a 
-                                        href={`https://defrag.racing/maps/${server.map}`} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <Q3STR s={server.map}/>
-                                    </a>
-                                </span>
+				<td style={{ width: '42%' }}>
+					<div className="server-info">
+						<div className="server-name-row">
+							<div 
+								className={`server-name ${connectable ? 'link' : 'disabled-link'}`}
+								onClick={() => connectable && this.connectToServer(address, server)}
+								title={`Connect to ${address}`}
+							>
+								<Q3STR s={server.hostname}/>
+							</div>
+						</div>
+						
+						<div className="server-details">
+							<div className="detail-row">
+								<span>Copy IP:</span>
+								<button 
+									className={`copy-button-small ${this.state.copySuccess === address ? 'copied' : ''}`}
+									onClick={() => this.copyToClipboard(address)}
+									title={`Copy IP address: ${address}`}
+								>
+									<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+										<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+									</svg>
+								</button>
+							</div>
+							
+							<div className="detail-row">
+								<span className="server-map">
+									Map: <a 
+										href={`https://defrag.racing/maps/${server.map}`} 
+										target="_blank" 
+										rel="noopener noreferrer"
+										onClick={(e) => e.stopPropagation()}
+									>
+										<Q3STR s={server.map}/>
+									</a>
+								</span>
                                 <button 
                                     className={`copy-button-small ${this.state.copySuccess === server.map ? 'copied' : ''}`}
                                     onClick={() => this.copyToClipboard(server.map)}
@@ -307,7 +307,6 @@ class ServerBrowserBase extends React.Component {
                                 <span className="player-count-inline">Players: {playerCount}</span>
                             </div>
                         </div>
-                        
                         {!connectable && (
                             <div className="server-warning">
                                 ⚠️ {reason}
