@@ -516,7 +516,7 @@ class PlayerListBase extends React.Component {
                                                                                 onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
                                                                                 onMouseLeave={() => this.setState({ hoveredPlayer: null })}
                                                                             >
-                                                                                👁️ <Q3STR s={spec.n}/>
+                                                                                👁️ <Q3STR s={spec.n}/> <span className="spectating-info">(spectating <Q3STR s={player.n}/>)</span>
                                                                                 {this.getPlayerStatus(spec).length > 0 && (
                                                                                     <span className="status-indicator">!</span>
                                                                                 )}
@@ -550,7 +550,7 @@ class PlayerListBase extends React.Component {
                                                                             onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
                                                                             onMouseLeave={() => this.setState({ hoveredPlayer: null })}
                                                                         >
-                                                                            <Q3STR s={spec.n}/>
+                                                                            <Q3STR s={spec.n}/> <span className="spectating-info">(free spectator)</span>
                                                                             {this.getPlayerStatus(spec).length > 0 && (
                                                                                 <span className="status-indicator">!</span>
                                                                             )}

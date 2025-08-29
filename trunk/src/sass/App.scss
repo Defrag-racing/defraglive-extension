@@ -480,6 +480,13 @@ body {
         }
     }
 
+	.spectating-info {
+		font-size: 0.75rem;
+		opacity: 0.7;
+		font-style: italic;
+		color: #888;
+	}
+
     .font-size-controls-input {
         .font-size-btn {
             background: rgba(255, 255, 255, 0.1);
@@ -1752,9 +1759,9 @@ body {
         .players-list {
             .player-name-container {
                 position: relative;
-                display: inline-block;
-                margin-right: 8px;
-                margin-bottom: 2px;
+                display: block;
+                margin-right: 0;
+                margin-bottom: 4px;
                 
                 .player-name {
                     font-size: 0.8rem;
@@ -1778,12 +1785,18 @@ body {
                     }
                     
                     &:after {
-                        content: ",";
+                        content: "";
                     }
                     
                     &:last-child:after {
                         content: "";
                     }
+                }
+                
+                &.spectator {
+                    padding-left: 15px;
+                    font-style: italic;
+                    opacity: 0.9;
                 }
                 
                 .player-tooltip-container {
