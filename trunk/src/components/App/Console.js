@@ -205,41 +205,57 @@ class ConsoleBase extends React.Component {
         })
     }
 
-    onConsoleMessage(ev) {
-        let msg = JSON.parse(ev.data)
+	onConsoleMessage(ev) {
+		let msg = JSON.parse(ev.data)
 
-        if(msg.origin && msg.action !== 'ext_command') {
-            return
-        }
+		if(msg.origin && msg.action !== 'ext_command') {
+			return
+		}
 
-        if(msg.action === 'message') {
-            msg.message.time = unix2time(msg.message.timestamp)
-            this.appendMessage(msg.message)
-            return
-        }
+		if(msg.action === 'message') {
+			msg.message.time = unix2time(msg.message.timestamp)
+			this.appendMessage(msg.message)
+			return
+		}
 
-        if(msg.action === 'serverstate') {
-            this.props.updateServerstate(msg.message)
-            return
-        }
+		// Add this new handler for map loading errors
+		if(msg.action === 'map_load_error') {
+			msg.message.time = unix2time(msg.message.timestamp)
+			msg.message.isMapError = true
+			this.appendMessage(msg.message)
+			return
+		}
 
-        if(msg.action === 'ext_command') {
-            if(msg.message.content.action === 'delete_message') {
-                let id = msg.message.content.id
+		// Add this new handler for map countdown messages
+		if(msg.action === 'map_countdown') {
+			msg.message.time = unix2time(msg.message.timestamp)
+			msg.message.isMapCountdown = true
+			this.appendMessage(msg.message)
+			return
+		}
 
-                for(let i = 0; i < this.state.messages.length; i++) {
-                    if(this.state.messages[i].id == id) {
-                        this.state.messages.splice(i, 1)
-                        break
-                    }
-                }
+		if(msg.action === 'serverstate') {
+			this.props.updateServerstate(msg.message)
+			return
+		}
 
-                this.setState({
-                    messages: this.state.messages
-                })
-            }
-        }
-    }
+		if(msg.action === 'ext_command') {
+			if(msg.message.content.action === 'delete_message') {
+				let id = msg.message.content.id
+
+				for(let i = 0; i < this.state.messages.length; i++) {
+					if(this.state.messages[i].id == id) {
+						this.state.messages.splice(i, 1)
+						break
+					}
+				}
+
+				this.setState({
+					messages: this.state.messages
+				})
+			}
+		}
+	}
 
     toggleConsole(e) {
         this.props.toggleConsole()
@@ -296,72 +312,132 @@ class ConsoleBase extends React.Component {
         }))
     }
 
-    submitMessage(e, inputEl) {
-        let me = this.props.twitchUser.name
-        let msg = inputEl ? inputEl.value.trim() : this.inputEl.current.value.trim()
-        let date = new Date()
+// In Console.js, modify the submitMessage method to handle ingame commands
 
-        if(this.state.status_message !== null) {
-            return false
-        }
+// In Console.js, modify the submitMessage method to handle ingame commands
 
-        if(msg === '') {
-            this.setState({
-                status_message: {
-                    'type': 'warning',
-                    'message': 'Your message cannot be blank',
-                }
-            }, () => {
-                setTimeout(() => {
-                    this.setState({status_message: null})
-                }, 2000);
-            })
-            return false
-        }
+submitMessage(e, inputEl) {
+    let me = this.props.twitchUser.name
+    let msg = inputEl ? inputEl.value.trim() : this.inputEl.current.value.trim()
+    let date = new Date()
 
-        if(/[^A-Za-z0-9\|!@#$\^&*\(\)_\-=\+\[\]{}\<\>\.,\?'": ]+/.test(msg)) {
-            this.setState({
-                status_message: {
-                    'type': 'warning',
-                    'message': 'Please use only alphanumeric characters',
-                }
-            }, () => {
-                setTimeout(() => {
-                    this.setState({status_message: null})
-                }, 2000);
-            })
-            return false
-        }
+    if(this.state.status_message !== null) {
+        return false
+    }
 
-        let new_msg = {
-            'action': 'message',
-            'origin': 'twitch',
-            'message': {
-                'author': me,
-                'content': msg,
-            },
-        }
-
-        if(msg.startsWith('!')) {
-            if(!msg.startsWith('!login')) {
-                new_msg['action'] = 'command'
-                new_msg['command'] = msg
+    if(msg === '') {
+        this.setState({
+            status_message: {
+                'type': 'warning',
+                'message': 'Your message cannot be blank',
             }
+        }, () => {
+            setTimeout(() => {
+                this.setState({status_message: null})
+            }, 2000);
+        })
+        return false
+    }
+
+    if(/[^A-Za-z0-9\|!@#$\^&*\(\)_\-=\+\[\]{}\<\>\.,\?'": ]+/.test(msg)) {
+        this.setState({
+            status_message: {
+                'type': 'warning',
+                'message': 'Please use only alphanumeric characters',
+            }
+        }, () => {
+            setTimeout(() => {
+                this.setState({status_message: null})
+            }, 2000);
+        })
+        return false
+    }
+
+    let new_msg = {
+        'action': 'message',
+        'origin': 'twitch',
+        'message': {
+            'author': me,
+            'content': msg,
+        },
+    }
+
+    // Handle ingame commands (starting with !)
+    if(msg.startsWith('!')) {
+        // Check for semicolon (always blocked)
+        if(msg.includes(';')) {
+            this.setState({
+                status_message: {
+                    'type': 'warning',
+                    'message': 'Semicolons are not allowed in commands',
+                }
+            }, () => {
+                setTimeout(() => {
+                    this.setState({status_message: null})
+                }, 2000);
+            })
+            return false
+        }
+        
+        // Check for "show" as a separate word
+        const words = msg.toLowerCase().split(' ');
+        if(words.includes('show')) {
+            this.setState({
+                status_message: {
+                    'type': 'warning',
+                    'message': 'Commands with "show" are not allowed',
+                }
+            }, () => {
+                setTimeout(() => {
+                    this.setState({status_message: null})
+                }, 2000);
+            })
+            return false
+        }
+        
+        // Only allow !top commands (with or without parameters)
+        if(msg.startsWith('!top')) {
+            // Send the command without username prefix
+            new_msg.message.content = msg;
+            new_msg.message.author = null;
+            
+            // Send the command
+            let ok = this.sendWS(new_msg)
+            if(!ok) {
+                return false
+            }
+        } else {
+            // Block any other ! commands
+            this.setState({
+                status_message: {
+                    'type': 'warning',
+                    'message': 'Only !top commands are allowed',
+                }
+            }, () => {
+                setTimeout(() => {
+                    this.setState({status_message: null})
+                }, 2000);
+            })
+            return false
         }
 
+    } else {
+        // Handle regular chat messages
+        // Regular messages get sent with the author name as usual
         let ok = this.sendWS(new_msg)
         if(!ok) {
             return false
         }
-
-        if (inputEl) inputEl.value = ''
-        else this.inputEl.current.value = ''
-        if (this.scrollerEl.current && !this.state.scrolledUp) {
-            this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight
-        }
-
-        return true
     }
+
+    if (inputEl) inputEl.value = ''
+    else this.inputEl.current.value = ''
+    if (this.scrollerEl.current && !this.state.scrolledUp) {
+        this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight
+    }
+
+    return true
+}
 
     sendCommand(cmd) {
         let me = this.props.twitchUser.name
