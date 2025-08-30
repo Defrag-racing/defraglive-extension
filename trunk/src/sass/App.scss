@@ -1247,16 +1247,13 @@ body {
     width: 100%;
     border-radius: 5px;
     padding: 15px;
-
     a {
         text-decoration: none;
         font-weight: 500;
     }
-
     @include mq($until: tablet) {
         min-width: 280px;
     }
-
     .header-top {
         margin-bottom: 10px;
         display: flex;
@@ -1265,42 +1262,35 @@ body {
         flex-wrap: wrap;
         gap: 10px;
         flex-shrink: 0;
-
         .h1 {
             font-size: 1.8rem;
             font-weight: 200;
             flex: 1;
         }
-
         .header-controls {
             display: flex;
             align-items: center;
             gap: 8px;
             flex-wrap: nowrap;
         }
-
         .spectate-next-button {
             cursor: pointer;
             transition: transform $duration-fast02 $motion-entrance-productive;
             opacity: 0.8;
-
             &:hover {
                 transform: scale(1.1);
                 opacity: 1;
             }
-
             .spectate-next-svg {
                 width: 18px;
                 height: 18px;
                 fill: currentColor;
             }
         }
-
         .afk-controls {
             display: flex;
             gap: 4px;
         }
-
         .afk-control-btn {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.3);
@@ -1331,7 +1321,22 @@ body {
                 cursor: not-allowed;
             }
         }
-
+        .refresh-button {
+            cursor: pointer;
+            transition: transform $duration-fast02 $motion-entrance-productive;
+            opacity: 0.8;
+            
+            &:hover {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            
+            .refresh-svg {
+                width: 20px;
+                height: 20px;
+                fill: currentColor;
+            }
+        }
         .close {
             cursor: pointer;
             transition: transform $duration-fast02 $motion-entrance-productive;
@@ -2616,4 +2621,47 @@ body {
 
 .request-spectate-btn.cooldown {
     animation: cooldown-pulse 2s infinite;
+}
+
+/* ... all your existing styles ... */
+
+// Refresh Button Animations
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.refresh-button {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+        transform: scale(1.1) !important;
+        opacity: 0.8;
+        
+        .refresh-svg {
+            transform: rotate(90deg);
+        }
+    }
+    
+    &:active {
+        transform: scale(0.95) !important;
+    }
+}
+
+.animated-refresh {
+    &:hover {
+        transform: rotate(180deg);
+    }
+}
+
+// Refresh Button Success Animation
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: scale(0); }
+    50% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0); }
 }

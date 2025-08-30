@@ -36,23 +36,25 @@ export function PlayerListLoader(props) {
 class PlayerListBase extends React.Component {
     constructor(props) {
         super(props)
-        this.state = {
-            hoveredPlayer: null,
-            hoveredHelp: null,
-            requestCooldowns: new Map(),
-            afkControlCooldown: 0,
-            copySuccess: null,
-            currentServerAddress: null,
-            serverInfo: null,
-            serverName: null,
-            hasSpectatorData: false  // Add this missing state property
-        }
+		this.state = {
+			hoveredPlayer: null,
+			hoveredHelp: null,
+			requestCooldowns: new Map(),
+			afkControlCooldown: 0,
+			copySuccess: null,
+			currentServerAddress: null,
+			serverInfo: null,
+			serverName: null,
+			hasSpectatorData: false,
+			isRefreshing: false,
+			refreshSuccess: false
+		}
         this.spec_timeout = null
-        this.refreshInterval = null  // Add this to track the interval
+        this.refreshInterval = null
         
+        // Add the missing toggle method binding
         this.toggle = this.toggle.bind(this)
         this.spectatePlayerID = this.spectatePlayerID.bind(this)
-        this.spectateNext = this.spectateNext.bind(this)
         this.requestSpectate = this.requestSpectate.bind(this)
         this.handleAfkReset = this.handleAfkReset.bind(this)
         this.handleAfkExtend = this.handleAfkExtend.bind(this)
@@ -61,6 +63,14 @@ class PlayerListBase extends React.Component {
         this.fetchServerData = this.fetchServerData.bind(this)
     }
     
+    // Add the missing toggle method
+	toggle() {
+		this.props.togglePlayerlist()
+		if (this.props.appstate.isPlayerlistOpen) {
+			this.fetchServerData()
+		}
+	}
+	
     componentDidMount() {
         this.props.getServerstate()
         this.fetchServerData()
@@ -88,11 +98,17 @@ class PlayerListBase extends React.Component {
 
 	async fetchServerData() {
 		try {
+			// Prevent multiple simultaneous refreshes
+			if (this.state.isRefreshing) return;
+			
+			this.setState({ isRefreshing: true, refreshSuccess: false });
+			
 			// Get current server IP and player data from bot (always available)
 			const serverstateResponse = await fetch('https://tw.defrag.racing/serverstate.json')
 			const serverstate = await serverstateResponse.json()
 			
 			if (!serverstate.ip) {
+				this.setState({ isRefreshing: false, refreshSuccess: false });
 				return
 			}
 			
@@ -113,21 +129,21 @@ class PlayerListBase extends React.Component {
 				currentServerAddress: serverstate.ip,
 				serverInfo: currentServerInfo,
 				serverName: serverstate.hostname || currentServerInfo?.hostname || 'Unknown',
-				hasSpectatorData: hasSpectatorData
-			})
+				hasSpectatorData: hasSpectatorData,
+				isRefreshing: false,
+				refreshSuccess: true
+			});
+			
+			// Clear success indicator after 2 seconds
+			setTimeout(() => {
+				this.setState({ refreshSuccess: false });
+			}, 2000);
 			
 		} catch (error) {
-			console.error('Error fetching server data:', error)
+			console.error('Error fetching server data:', error);
+			this.setState({ isRefreshing: false, refreshSuccess: false });
 		}
 	}
-
-    toggle() {
-        this.props.getServerstate()
-        this.props.togglePlayerlist()
-        if (!this.props.appstate.isPlayerlistOpen) {
-            this.fetchServerData()
-        }
-    }
 
     spectatePlayerID(id) {
         if(this.props.twitchUser.role == 'guest') {
@@ -155,13 +171,6 @@ class PlayerListBase extends React.Component {
         if (table) {
             table.classList.add('loading')
         }
-    }
-
-    spectateNext() {
-        this.props.sendCommand({
-            'action': 'spectate',
-            'value': 'next'
-        })
     }
 
     requestSpectate(playerName) {
@@ -396,13 +405,16 @@ class PlayerListBase extends React.Component {
 					<div className="playerlist-content">
 						<div className="header-top">
 							<div className="h1">Player List</div>
-							<div className="header-controls" style={{ gap: '15px', alignItems: 'center' }}>
-								<div className="spectate-next-button" onClick={this.spectateNext} title="Spectate Next Player" style={{ transform: 'scale(1.3)' }}>
-									<svg className="spectate-next-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-										<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+							<div className="header-controls">
+								<div className="refresh-button" onClick={this.fetchServerData} title="Refresh Player List" style={{ transform: 'scale(1.6)' }}>
+									<svg className="refresh-svg animated-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ 
+										transition: 'transform 0.3s ease',
+										animation: this.state.isRefreshing ? 'spin 1s linear infinite' : 'none'
+									}}>
+										<path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
 									</svg>
 								</div>
-								<div className="afk-controls" style={{ gap: '8px', display: 'flex' }}>
+								<div className="afk-controls" style={{ gap: '8px', display: 'flex', alignItems: 'center', marginLeft: '12px' }}>
 									<button 
 										className={`afk-control-btn reset ${isOnAfkCooldown ? 'cooldown' : ''}`}
 										onClick={this.handleAfkReset}
@@ -410,7 +422,7 @@ class PlayerListBase extends React.Component {
 										title="Reset AFK timer"
 										style={{ transform: 'scale(1.3)' }}
 									>
-										↻
+										🔄
 									</button>
 									<button 
 										className={`afk-control-btn extend ${isOnAfkCooldown ? 'cooldown' : ''}`}
@@ -422,14 +434,11 @@ class PlayerListBase extends React.Component {
 										+5m
 									</button>
 								</div>
-								<div className="close" onClick={this.toggle} title="Close Player List" style={{ transform: 'scale(1.3)' }}>
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-										<path d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.71A1 1 0 0 0 5.7 7.12L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/>
-									</svg>
+								<div className="close" onClick={this.toggle} title="Close Player List" style={{ transform: 'scale(1.3)', marginLeft: '12px' }}>
+									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
 								</div>
 							</div>
 						</div>
-
 						<div className="section" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
 							{/* Left Column - Server Info */}
 							<div style={{ flex: '0 0 32%', minWidth: '150px' }}>
