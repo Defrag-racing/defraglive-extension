@@ -1,0 +1,15 @@
+{
+  "manifest_version": 1,
+  "type": "panel", 
+  "name": "DefragLive Extension",
+  "version": "1.0.0",
+  "description": "Defrag speedrunning extension",
+  "mobile": true,
+  "panel": {
+    "viewer_url": "panel.html",
+    "height": 300
+  },
+  "author": {
+    "name": "DefragLive"
+  }
+}
