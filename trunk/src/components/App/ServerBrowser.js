@@ -410,7 +410,7 @@ class ServerBrowserBase extends React.Component {
         
         return (
             <div className={`serverbrowser-wrap serverbrowser-${this.props.appstate.isServerBrowserOpen ? 'opened' : 'closed'}`}>
-                <div className="serverbrowser-button" onClick={this.toggle} title="Toggle Server Browser">
+                <div className="serverbrowser-button" onClick={this.toggle}>
                     {this.props.appstate.isServerBrowserOpen ? svgClose : svgServers}
                 </div>
                 <div className="serverbrowser-content-wrap">

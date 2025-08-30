@@ -389,7 +389,7 @@ class PlayerListBase extends React.Component {
 
 		return (
 			<div className={`playerlist-wrap playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'}`}>
-				<div className="playerlist-button" onClick={this.toggle} title="Toggle Player List">
+				<div className="playerlist-button" onClick={this.toggle}>
 					{this.props.appstate.isPlayerlistOpen ? svgClose : svgPlayers}
 				</div>
 				<div className="playerlist-content-wrap" style={{ width: '45%', minWidth: '400px', maxWidth: '650px' }}>
@@ -504,7 +504,7 @@ class PlayerListBase extends React.Component {
 
 							{/* Right Column - Player Table */}
 							<div style={{ flex: '1', minWidth: '220px', maxWidth: '350px' }}>
-								<div className="content" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+								<div className="content" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
 									{Object.keys(this.props.serverstate.players).length === 0 ? (
 										<div className="no-players">No players available</div>
 									) : (

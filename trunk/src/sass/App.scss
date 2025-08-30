@@ -1245,9 +1245,17 @@ body {
     transition: transform $duration-fast02 $motion-entrance-productive;
     box-shadow: rgba(0, 0, 0, 0.2) 5px 5px 20px;
     width: 100%;
-    overflow: auto;
     border-radius: 5px;
     padding: 15px;
+
+    a {
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    @include mq($until: tablet) {
+        min-width: 280px;
+    }
 
     .header-top {
         margin-bottom: 10px;
@@ -1256,6 +1264,7 @@ body {
         align-items: center;
         flex-wrap: wrap;
         gap: 10px;
+        flex-shrink: 0;
 
         .h1 {
             font-size: 1.8rem;
@@ -1377,7 +1386,8 @@ body {
             text-decoration: underline;
         }
     }
-	    .server-info-section {
+
+    .server-info-section {
         margin-bottom: 15px;
         padding-bottom: 15px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -2144,17 +2154,64 @@ body {
     color: #888;
 }
 
+// Console Button Hover
+.console-button:hover::after {
+    content: "Console";
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    top: 0;
+    left: 35px;
+    z-index: 30;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+// Player List Button Hover
+.playerlist-button:hover::after {
+    content: "Players";
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    top: 0;
+    left: 35px;
+    z-index: 30;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
 // Server Browser Button Hover
 .serverbrowser-button:hover::after {
     content: "Servers";
     position: absolute;
     background: rgba(0,0,0,0.8);
     color: white;
-    padding: 2px 5px;
+    padding: 4px 8px;
     border-radius: 3px;
-    top: 35px;
-    left: 0;
-    z-index: 10;
+    top: 0;
+    left: 35px;
+    z-index: 30;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+// Chat/Notify Button Hover
+.say-button:hover::after {
+    content: "Chat";
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    top: 0;
+    left: 35px;
+    z-index: 30;
+    white-space: nowrap;
+    font-size: 12px;
 }
 
 // Tooltip and Overflow Fixes

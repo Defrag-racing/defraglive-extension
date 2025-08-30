@@ -540,7 +540,7 @@ render() {
 
     return (
 			<>
-				<div className="console-button" onClick={this.toggleConsole} title="Toggle Console">~</div>
+				<div className="console-button" onClick={this.toggleConsole}>~</div>
 				<div className={`console-wrap console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'} font-${this.state.fontSize}`}>
 					<div className="console-content-wrap">
 						<div className="console-scroller" ref={this.scrollerEl} onScroll={this.handleScroll}>
