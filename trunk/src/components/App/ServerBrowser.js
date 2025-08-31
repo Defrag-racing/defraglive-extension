@@ -40,9 +40,22 @@ class ServerBrowserBase extends React.Component {
         this.copyToClipboard = this.copyToClipboard.bind(this)
     }
 
-    componentDidMount() {
-        this.fetchServers()
-    }
+	componentDidMount() {
+		this.fetchServers()
+		
+		// Add periodic refresh every 30 seconds when server browser is open
+		this.refreshInterval = setInterval(() => {
+			if (this.props.appstate.isServerBrowserOpen) {
+				this.fetchServers()
+			}
+		}, 30000)
+	}
+
+	componentWillUnmount() {
+		if (this.refreshInterval) {
+			clearInterval(this.refreshInterval)
+		}
+	}
 
     toggle() {
         this.props.toggleServerBrowser()
