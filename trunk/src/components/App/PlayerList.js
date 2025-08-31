@@ -277,7 +277,9 @@ class PlayerListBase extends React.Component {
 
     // Helper function to identify bot players
 	isBotPlayer(player) {
-		return player.c1 === BOT_CONFIG.SECRET;
+		// Use dynamic secret from serverstate if available, fallback to config
+		const botSecret = this.props.serverstate.bot_secret || BOT_CONFIG.SECRET;
+		return player.c1 === botSecret;
 	}
 
     getPlayerWithScores() {
@@ -304,6 +306,7 @@ class PlayerListBase extends React.Component {
                     time: scoreData?.time || 0,
                     follow_num: follow_num,
                     team: follow_num === -1 ? '0' : '3',
+					t: player.t,
                     nospec: player.nospec,
                     c1: player.c1,
                     clientId: player.clientId || parseInt(player.id)
@@ -317,6 +320,7 @@ class PlayerListBase extends React.Component {
             time: 0,
             follow_num: -1,
             team: '0',
+			t: player.t,
             nospec: player.nospec,
             c1: player.c1,
             clientId: player.clientId || parseInt(player.id)
@@ -367,12 +371,24 @@ class PlayerListBase extends React.Component {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(3, '0')}`
     }
 
-    canSpectatePlayer(player) {        
-        return player.nospec !== 1 && 
-               player.nospec !== '1' && 
-               player.c1 !== 'nospec' && 
-               player.c1 !== 'nospecpm'
-    }
+	canSpectatePlayer(player) {        
+		// Don't allow spectating spectators (t === '3')
+		if (player.t === '3') {
+			return false;
+		}
+		
+		// Don't allow spectating players with nospec enabled
+		const hasNospec = player.nospec === 1 || 
+			   player.nospec === '1' || 
+			   player.c1 === 'nospec' || 
+			   player.c1 === 'nospecpm';
+			   
+		if (hasNospec) {
+			return false;
+		}
+		
+		return true;
+	}
 
     isOnCooldown(playerName) {
         const now = Date.now()
@@ -385,7 +401,7 @@ class PlayerListBase extends React.Component {
 		let svgClose = <svg className="playerlist-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Player List"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
 		
 		const playersWithScores = this.getPlayerWithScores()
-		const activePlayers = playersWithScores.filter(player => player.follow_num === -1)
+		const activePlayers = playersWithScores.filter(player => player.follow_num === -1 && player.t !== '3')
 		const allSpectators = playersWithScores.filter(player => player.follow_num !== -1)
 
 		const isOnAfkCooldown = Date.now() < this.state.afkControlCooldown
@@ -572,7 +588,11 @@ class PlayerListBase extends React.Component {
 																				{this.getPlayerStatus(player).length > 0 && (
 																					<span className="status-indicator">!</span>
 																				)}
-																				{!canSpectate && (
+																				{/* Show different indicators for different reasons */}
+																				{!canSpectate && player.t === '3' && (
+																					<span className="spectator-indicator"> (Spectator)</span>
+																				)}
+																				{!canSpectate && player.t !== '3' && (
 																					<span className="nospec-indicator"> (No Spectating)</span>
 																				)}
 																			</div>
@@ -598,8 +618,8 @@ class PlayerListBase extends React.Component {
 																		<td style={{ padding: '3px 6px' }}>
 																			<div className="player-row">
 																				<div 
-																					className={`player-info link ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}
-																					onClick={() => this.spectatePlayerID(spec.id)}
+																					className={`player-info ${this.canSpectatePlayer(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}
+																					onClick={this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined}
 																					onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
 																					onMouseLeave={() => this.setState({ hoveredPlayer: null })}
 																				>
@@ -648,8 +668,8 @@ class PlayerListBase extends React.Component {
 																				<td style={{ padding: '3px 6px' }}>
 																					<div className="player-row">
 																						<div 
-																							className={`player-info link ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}
-																							onClick={() => this.spectatePlayerID(spec.id)}
+																							className={`player-info ${this.canSpectatePlayer(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}
+																							onClick={this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined}
 																							onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
 																							onMouseLeave={() => this.setState({ hoveredPlayer: null })}
 																						>
