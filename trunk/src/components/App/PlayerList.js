@@ -2,6 +2,7 @@ import React from 'react'
 import { Q3STR } from '../../partials/Quake3'
 import { mapDispatch, mapState } from './State'
 import { connect } from 'react-redux'
+import { BOT_CONFIG } from '../../botConfig';
 
 const SV_TYPE = {
     '0': 'auto',
@@ -274,52 +275,53 @@ class PlayerListBase extends React.Component {
         document.body.removeChild(textArea)
     }
 
-	getPlayerWithScores() {
-		const players = Object.values(this.props.serverstate.players || {})
-		
-		// If we have spectator data from servers API, use it
-		if (this.state.hasSpectatorData && this.state.serverInfo?.scores?.players) {
-			const scores = this.state.serverInfo.scores.players
-			
-			return players.map(player => {
-				// Try multiple matching strategies since the data sources use different ID fields
-				const scoreData = scores.find(score => {
-					// First try: match with player.id (converted to number)
-					const idMatch = score.player_num === parseInt(player.id)
-					// Second try: match with player.clientId if it exists
-					const clientIdMatch = player.clientId && score.player_num === player.clientId
-					
-					return idMatch || clientIdMatch
-				})
-				
-				// Use scoreData.follow_num directly, don't default to -1 for follow_num: 0
-				const follow_num = scoreData ? scoreData.follow_num : -1
-				
-				return {
-					...player,
-					time: scoreData?.time || 0,
-					follow_num: follow_num,
-					team: follow_num === -1 ? '0' : '3',
-					// Keep the real-time nospec status from serverstate
-					nospec: player.nospec,
-					c1: player.c1,
-					// Add clientId for consistency if it doesn't exist
-					clientId: player.clientId || parseInt(player.id)
-				}
-			})
-		}
-		
-		// Fallback: no spectator data available, treat all as active players
-		return players.map(player => ({
-			...player,
-			time: 0,
-			follow_num: -1, // All are active players
-			team: '0',
-			nospec: player.nospec,
-			c1: player.c1,
-			clientId: player.clientId || parseInt(player.id)
-		}))
+    // Helper function to identify bot players
+	isBotPlayer(player) {
+		return player.c1 === BOT_CONFIG.SECRET;
 	}
+
+    getPlayerWithScores() {
+        const players = Object.values(this.props.serverstate.players || {})
+        
+        // Filter out the bot player using configurable secret
+        const nonBotPlayers = players.filter(player => !this.isBotPlayer(player))
+        
+        // If we have spectator data from servers API, use it
+        if (this.state.hasSpectatorData && this.state.serverInfo?.scores?.players) {
+            const scores = this.state.serverInfo.scores.players
+            
+            return nonBotPlayers.map(player => {
+                const scoreData = scores.find(score => {
+                    const idMatch = score.player_num === parseInt(player.id)
+                    const clientIdMatch = player.clientId && score.player_num === player.clientId
+                    return idMatch || clientIdMatch
+                })
+                
+                const follow_num = scoreData ? scoreData.follow_num : -1
+                
+                return {
+                    ...player,
+                    time: scoreData?.time || 0,
+                    follow_num: follow_num,
+                    team: follow_num === -1 ? '0' : '3',
+                    nospec: player.nospec,
+                    c1: player.c1,
+                    clientId: player.clientId || parseInt(player.id)
+                }
+            })
+        }
+        
+        // Fallback: no spectator data available
+        return nonBotPlayers.map(player => ({
+            ...player,
+            time: 0,
+            follow_num: -1,
+            team: '0',
+            nospec: player.nospec,
+            c1: player.c1,
+            clientId: player.clientId || parseInt(player.id)
+        }))
+    }
 
     getPlayerStatus(player) {
         const statuses = []
