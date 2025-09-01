@@ -162,31 +162,31 @@ export default function Row(props) {
 	}
 
     switch(props.data.type) {
-        case 'SAY':
-            return (
-                <div className="row">
-                    <div className="col timestamp">
-                        {props.data.time}
-                        {moderation}
-                    </div>
-                    <div className="col player-name"><Q3STR s={props.data.author}/>:</div>
-                    <div className="col message">
-                        <Q3STR s={isTranslated ? translatedText : props.data.content}/>
-                        <button 
-                            className="translate-btn" 
-                            onClick={translateMessage}
-                            disabled={isTranslating}
-                            title={
-                                isTranslating ? 'Translating...' :
-                                isTranslated ? 'Show original text' :
-                                'Translate to English'
-                            }
-                        >
-                            {isTranslating ? '⟳' : isTranslated ? 'Original' : 'EN'}
-                        </button>
-                    </div>
-                </div>
-            )
+		case 'SAY':
+			return (
+				<div className="row">
+					<div className="col timestamp">
+						{props.data.time}
+						{moderation}
+					</div>
+					<div className="col player-name"><Q3STR s={props.data.author}/>:</div>
+					<div className="col message">
+						<Q3STR s={isTranslated ? translatedText : props.data.content}/>
+						<button 
+							className="translate-btn" 
+							onClick={translateMessage}
+							disabled={isTranslating}
+							title={
+								isTranslating ? 'Translating...' :
+								isTranslated ? 'Show original text' :
+								'Translate to English'
+							}
+						>
+							{isTranslating ? '⟳' : isTranslated ? 'Original' : 'Translate to English'}
+						</button>
+					</div>
+				</div>
+			)
         // case 'PRINT':
         // case 'ANNOUNCE':
         // case 'RENAME':

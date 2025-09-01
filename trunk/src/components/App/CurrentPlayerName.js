@@ -10,6 +10,15 @@ export function CurrentPlayerNameLoader(props) {
 }
 
 function CurrentPlayerNameBase(props) {
+    // Add safety checks
+    if (!props.serverstate || !props.serverstate.current_player) {
+        return (
+            <div className="curr-player-wrap">
+                Loading...
+            </div>
+        )
+    }
+    
     return (
         <div className="curr-player-wrap">
             {props.serverstate.current_player.n}

@@ -2726,40 +2726,41 @@ body {
     font-size: 0.8rem;
 }
 
-/* Translation Button Styles - Add to your App.scss */
+/* Updated Translation Button Styles - More Visible */
 .translate-btn {
-    background: rgba(145, 71, 255, 0.15);
-    border: 1px solid rgba(145, 71, 255, 0.3);
+    background: rgba(145, 71, 255, 0.25);  /* Increased from 0.15 */
+    border: 1px solid rgba(145, 71, 255, 0.5);  /* Increased from 0.3 */
     color: #9147FF;
-    padding: 3px 8px;
+    padding: 4px 10px;  /* Slightly larger padding */
     margin-left: 10px;
     border-radius: 4px;
-    font-size: 0.7rem;
+    font-size: 0.75rem;  /* Slightly larger font */
     cursor: pointer;
     transition: all 0.3s ease;
-    opacity: 0.3; /* Semi-transparent by default */
+    opacity: 0.7; /* Increased from 0.3 to be more visible by default */
     font-weight: 500;
-    min-width: 32px;
+    min-width: auto;  /* Remove fixed width for longer text */
     text-align: center;
     position: relative;
+    white-space: nowrap;  /* Prevent text wrapping */
 }
 
 /* Show full opacity when hovering over console or button */
 .console-wrap:hover .translate-btn,
 .translate-btn:hover {
     opacity: 1;
-    background: rgba(145, 71, 255, 0.25);
-    border-color: rgba(145, 71, 255, 0.5);
+    background: rgba(145, 71, 255, 0.35);  /* More vibrant on hover */
+    border-color: rgba(145, 71, 255, 0.7);
     transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(145, 71, 255, 0.2);
+    box-shadow: 0 3px 10px rgba(145, 71, 255, 0.3);  /* Stronger shadow */
 }
 
 /* Disabled state (while translating) */
 .translate-btn:disabled {
-    opacity: 0.4;
+    opacity: 0.5;  /* Slightly more visible when disabled */
     cursor: not-allowed;
-    background: rgba(145, 71, 255, 0.1);
-    border-color: rgba(145, 71, 255, 0.2);
+    background: rgba(145, 71, 255, 0.15);
+    border-color: rgba(145, 71, 255, 0.3);
 }
 
 .translate-btn:disabled {
@@ -2773,43 +2774,55 @@ body {
 
 /* Theme-specific styles */
 .theme-light .translate-btn {
-    background: rgba(113, 55, 199, 0.15);
-    border-color: rgba(113, 55, 199, 0.3);
+    background: rgba(113, 55, 199, 0.25);  /* More visible in light theme */
+    border-color: rgba(113, 55, 199, 0.5);
     color: #7137c7;
 }
 
 .theme-light .console-wrap:hover .translate-btn,
 .theme-light .translate-btn:hover {
-    background: rgba(113, 55, 199, 0.25);
-    border-color: rgba(113, 55, 199, 0.5);
-    box-shadow: 0 2px 8px rgba(113, 55, 199, 0.2);
+    background: rgba(113, 55, 199, 0.35);
+    border-color: rgba(113, 55, 199, 0.7);
+    box-shadow: 0 3px 10px rgba(113, 55, 199, 0.3);
+}
+
+.theme-dark .translate-btn {
+    background: rgba(145, 71, 255, 0.3);  /* Even more visible in dark theme */
+    border-color: rgba(145, 71, 255, 0.6);
+    color: #B47FFF;  /* Slightly brighter purple */
+}
+
+.theme-dark .console-wrap:hover .translate-btn,
+.theme-dark .translate-btn:hover {
+    background: rgba(145, 71, 255, 0.4);
+    border-color: rgba(145, 71, 255, 0.8);
+    box-shadow: 0 3px 10px rgba(145, 71, 255, 0.4);
 }
 
 /* Responsive font sizes */
 .console-wrap.font-small .translate-btn {
-    font-size: 0.6rem;
-    padding: 2px 6px;
-    min-width: 28px;
+    font-size: 0.65rem;  /* Adjusted for readability */
+    padding: 3px 8px;
 }
 
 .console-wrap.font-large .translate-btn {
-    font-size: 0.8rem;
-    padding: 4px 10px;
-    min-width: 36px;
+    font-size: 0.85rem;  /* Larger for better visibility */
+    padding: 5px 12px;
 }
 
-/* Mobile styles */
+/* Mobile styles - more visible on mobile */
 @media (max-width: 768px) {
     .translate-btn {
-        font-size: 0.65rem;
-        padding: 2px 6px;
+        font-size: 0.7rem;
+        padding: 3px 8px;
         margin-left: 8px;
-        min-width: 30px;
-        opacity: 0.6; /* More visible on mobile since no hover */
+        opacity: 0.8; /* Even more visible on mobile since no hover */
+        background: rgba(145, 71, 255, 0.3);  /* More prominent on mobile */
     }
     
     .translate-btn:active {
         opacity: 1;
         transform: scale(0.95);
+        background: rgba(145, 71, 255, 0.4);
     }
 }
