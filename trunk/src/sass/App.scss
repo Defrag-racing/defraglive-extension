@@ -2737,7 +2737,7 @@ body {
     font-size: 0.75rem;  /* Slightly larger font */
     cursor: pointer;
     transition: all 0.3s ease;
-    opacity: 0.7; /* Increased from 0.3 to be more visible by default */
+    opacity: 0.5; /* Increased from 0.3 to be more visible by default */
     font-weight: 500;
     min-width: auto;  /* Remove fixed width for longer text */
     text-align: center;
@@ -2746,7 +2746,7 @@ body {
 }
 
 /* Show full opacity when hovering over console or button */
-.console-wrap:hover .translate-btn,
+.console-content-wrap:hover .translate-btn,
 .translate-btn:hover {
     opacity: 1;
     background: rgba(145, 71, 255, 0.35);  /* More vibrant on hover */
