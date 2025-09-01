@@ -53,6 +53,7 @@ class ConsoleBase extends React.Component {
         // Font size methods
         this.increaseFontSize = this.increaseFontSize.bind(this)
         this.decreaseFontSize = this.decreaseFontSize.bind(this)
+        this.sendTranslationRequest = this.sendTranslationRequest.bind(this)
     }
 
     increaseFontSize() {
@@ -78,8 +79,39 @@ class ConsoleBase extends React.Component {
     componentDidMount() {
         document.addEventListener('keypress', this.onKeyPress)
 
+        window.sendTranslationRequest = this.sendTranslationRequest;
+
         this.initWebsocket()
         this.fetchMessages()
+    }
+
+    sendTranslationRequest(cacheKey, text, messageId) {
+        if (!this.ws || this.ws.readyState !== 1) {
+            console.warn('WebSocket not connected, cannot send translation request');
+            return false;
+        }
+
+        const translationMessage = {
+            'action': 'ext_command',
+            'origin': 'twitch',
+            'message': {
+                'content': {
+                    'action': 'translate_message',
+                    'cache_key': cacheKey,
+                    'text': text,
+                    'message_id': messageId
+                }
+            }
+        };
+
+        try {
+            this.ws.send(JSON.stringify(translationMessage));
+            console.log('Translation request sent:', cacheKey);
+            return true;
+        } catch (error) {
+            console.error('Failed to send translation request:', error);
+            return false;
+        }
     }
 
     fetchMessages() {
@@ -118,6 +150,7 @@ class ConsoleBase extends React.Component {
         
         // this.ws = new WebSocket("ws://localhost:8443/ws")
         this.ws = new WebSocket("wss://tw.defrag.racing/ws")
+        //this.ws = new WebSocket("wss://tw.defrag.racing:8443/ws")
         this.ws.onmessage = this.onConsoleMessage
         this.ws.onerror = this.onError
         this.ws.onopen = this.onConnect
@@ -210,6 +243,15 @@ class ConsoleBase extends React.Component {
 
 		if(msg.origin && msg.action !== 'ext_command') {
 			return
+		}
+
+		if(msg.action === 'translation_result') {
+			const { cache_key, translation } = msg;
+			
+			window.dispatchEvent(new CustomEvent('websocket-translation', { 
+				detail: { cacheKey: cache_key, translation: translation } 
+			}));
+			return;
 		}
 
 		if(msg.action === 'message') {

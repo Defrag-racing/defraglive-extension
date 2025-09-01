@@ -1,12 +1,37 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Q3STR } from '../../partials/Quake3'
 import { BOT_CONFIG } from '../../botConfig'
+
+// Global translation cache - shared across all Row components
+const TRANSLATION_CACHE = new Map()
 
 export default function Row(props) {
 	const [isTranslated, setIsTranslated] = useState(false);
 	const [translatedText, setTranslatedText] = useState('');
 	const [isTranslating, setIsTranslating] = useState(false);
-	const [hasTranslation, setHasTranslation] = useState(false); // Track if we have a cached translation
+
+	const cleanText = props.data.content.replace(/\^./g, '');
+	const cacheKey = cleanText.trim().toLowerCase();
+
+	// ADD THIS: Listen for WebSocket translation results
+	useEffect(() => {
+		function handleWebSocketTranslation(event) {
+			const { cacheKey: receivedKey, translation } = event.detail;
+			
+			if (receivedKey === cacheKey) {
+				TRANSLATION_CACHE.set(cacheKey, translation);
+				setTranslatedText(translation);
+				setIsTranslated(true);
+				setIsTranslating(false);
+			}
+		}
+
+		window.addEventListener('websocket-translation', handleWebSocketTranslation);
+		
+		return () => {
+			window.removeEventListener('websocket-translation', handleWebSocketTranslation);
+		};
+	}, [cacheKey]);
 
 	async function translateMessage() {
 		if (isTranslated) {
@@ -14,16 +39,37 @@ export default function Row(props) {
 			return;
 		}
 
-		// If we already have a translation cached, use it
-		if (hasTranslation && translatedText) {
+		// Check cache first
+		if (TRANSLATION_CACHE.has(cacheKey)) {
+			const cachedTranslation = TRANSLATION_CACHE.get(cacheKey);
+			setTranslatedText(cachedTranslation);
 			setIsTranslated(true);
 			return;
 		}
 
-		const cleanText = props.data.content.replace(/\^./g, '');
 		if (cleanText.length < 3) return;
 
 		setIsTranslating(true);
+		
+		// ADD THIS: Try WebSocket first
+		if (window.sendTranslationRequest) {
+			window.sendTranslationRequest(cacheKey, cleanText, props.data.id);
+			
+			// Fallback timeout
+			setTimeout(() => {
+				if (isTranslating && !TRANSLATION_CACHE.has(cacheKey)) {
+					fallbackToDirectTranslation();
+				}
+			}, 10000);
+			return;
+		}
+
+		// Your existing direct translation code
+		await fallbackToDirectTranslation();
+	}
+
+	// ADD THIS: Separate fallback function
+	async function fallbackToDirectTranslation() {
 		try {
 			const response = await fetch('https://translation.googleapis.com/language/translate/v2', {
 				method: 'POST',
@@ -38,13 +84,15 @@ export default function Row(props) {
 			
 			const data = await response.json();
 			if (data.data && data.data.translations && data.data.translations[0]) {
-				setTranslatedText(data.data.translations[0].translatedText);
-				setHasTranslation(true); // Mark as cached
+				const translation = data.data.translations[0].translatedText;
+				TRANSLATION_CACHE.set(cacheKey, translation);
+				setTranslatedText(translation);
 				setIsTranslated(true);
 			}
 		} catch (error) {
 			console.error('Translation failed:', error);
 		}
+		
 		setIsTranslating(false);
 	}
 
@@ -74,6 +122,7 @@ export default function Row(props) {
             </div>
         )
     }
+    
     // Handle map countdown messages
     if(props.data.type === 'MAP_COUNTDOWN') {
         return (
@@ -93,7 +142,8 @@ export default function Row(props) {
             </div>
         )
     }
-	// ADD THE CONNECTION ERROR HERE - AFTER MAP COUNTDOWN, BEFORE THE SWITCH STATEMENT
+    
+	// Connection error handling
 	if(props.data.type === 'CONNECTION_ERROR') {
 		return (
 			<div className="row -connection-error">
@@ -126,7 +176,11 @@ export default function Row(props) {
                             className="translate-btn" 
                             onClick={translateMessage}
                             disabled={isTranslating}
-                            title="Translate to English"
+                            title={
+                                isTranslating ? 'Translating...' :
+                                isTranslated ? 'Show original text' :
+                                'Translate to English'
+                            }
                         >
                             {isTranslating ? '⟳' : isTranslated ? 'Original' : 'EN'}
                         </button>

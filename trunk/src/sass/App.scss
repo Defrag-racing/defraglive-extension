@@ -2725,3 +2725,91 @@ body {
     font-style: italic;
     font-size: 0.8rem;
 }
+
+/* Translation Button Styles - Add to your App.scss */
+.translate-btn {
+    background: rgba(145, 71, 255, 0.15);
+    border: 1px solid rgba(145, 71, 255, 0.3);
+    color: #9147FF;
+    padding: 3px 8px;
+    margin-left: 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0.3; /* Semi-transparent by default */
+    font-weight: 500;
+    min-width: 32px;
+    text-align: center;
+    position: relative;
+}
+
+/* Show full opacity when hovering over console or button */
+.console-wrap:hover .translate-btn,
+.translate-btn:hover {
+    opacity: 1;
+    background: rgba(145, 71, 255, 0.25);
+    border-color: rgba(145, 71, 255, 0.5);
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(145, 71, 255, 0.2);
+}
+
+/* Disabled state (while translating) */
+.translate-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: rgba(145, 71, 255, 0.1);
+    border-color: rgba(145, 71, 255, 0.2);
+}
+
+.translate-btn:disabled {
+    animation: translate-spin 1s linear infinite;
+}
+
+@keyframes translate-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Theme-specific styles */
+.theme-light .translate-btn {
+    background: rgba(113, 55, 199, 0.15);
+    border-color: rgba(113, 55, 199, 0.3);
+    color: #7137c7;
+}
+
+.theme-light .console-wrap:hover .translate-btn,
+.theme-light .translate-btn:hover {
+    background: rgba(113, 55, 199, 0.25);
+    border-color: rgba(113, 55, 199, 0.5);
+    box-shadow: 0 2px 8px rgba(113, 55, 199, 0.2);
+}
+
+/* Responsive font sizes */
+.console-wrap.font-small .translate-btn {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    min-width: 28px;
+}
+
+.console-wrap.font-large .translate-btn {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+    min-width: 36px;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .translate-btn {
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        margin-left: 8px;
+        min-width: 30px;
+        opacity: 0.6; /* More visible on mobile since no hover */
+    }
+    
+    .translate-btn:active {
+        opacity: 1;
+        transform: scale(0.95);
+    }
+}
