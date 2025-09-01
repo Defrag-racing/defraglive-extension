@@ -80,7 +80,7 @@ class PlayerListBase extends React.Component {
             if (this.props.appstate.isPlayerlistOpen) {
                 this.fetchServerData()
             }
-        }, 30000)
+        }, 15000)
     }
     
     componentDidUpdate(prevProps) {

@@ -48,7 +48,7 @@ class ServerBrowserBase extends React.Component {
 			if (this.props.appstate.isServerBrowserOpen) {
 				this.fetchServers()
 			}
-		}, 30000)
+		}, 15000)
 	}
 
 	componentWillUnmount() {
@@ -65,6 +65,7 @@ class ServerBrowserBase extends React.Component {
     }
 
     async fetchServers() {
+		if (this.state.loading) return;
         this.setState({ loading: true, error: null })
         
         try {
