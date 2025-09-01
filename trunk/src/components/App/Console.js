@@ -7,6 +7,7 @@ import { NotifyLines } from './NotifyLines'
 import { CurrentPlayerName } from './CurrentPlayerName'
 import { PlayerList } from './PlayerList'
 import { ServerBrowser } from './ServerBrowser'
+import { SettingsPanel } from './SettingsPanel'
 import { unix2time } from '../../util/DateTime'
 import Message from '../../partials/StatusMessages'
 
@@ -254,6 +255,20 @@ class ConsoleBase extends React.Component {
 			return;
 		}
 
+		if(msg.action === 'settings_applied') {
+			// Broadcast current settings to all connected viewers
+			// This will update the UI for everyone when someone changes settings
+			return
+		}
+
+		if(msg.action === 'current_settings') {
+			// Receive current settings from server and update SettingsPanel
+			window.dispatchEvent(new CustomEvent('current-settings', { 
+				detail: msg.settings 
+			}));
+			return
+		}
+
 		if(msg.action === 'message') {
 			msg.message.time = unix2time(msg.message.timestamp)
 			this.appendMessage(msg.message)
@@ -489,6 +504,8 @@ submitMessage(e, inputEl) {
             return false
         }
 
+		console.log('sendCommand called with:', cmd)  // ADD THIS DEBUG LINE
+
         let msg = cmd
 
         let new_msg = {
@@ -500,34 +517,44 @@ submitMessage(e, inputEl) {
             },
         }
 
-        let ok = this.sendWS(new_msg)
-        if(!ok) {
-            return false
-        }
-    }
+    console.log('Sending WebSocket message:', new_msg)  // ADD THIS DEBUG LINE
 
-    sendWS(msg) {
-        if(!this.ws) {
-            return false
-        }
+		let ok = this.sendWS(new_msg)
+		if(!ok) {
+			return false
+		}
 
-        let states = ['connecting', 'open', 'closing', 'closed']
-        if(this.ws.readyState !== 1) {
-            this.setState({
-                status_message: {
-                    'type': 'error',
-                    'message': `The connection is ${states[this.ws.readyState]}. Reconnecting...`,
-                }
-            }, () => {
-                this.ws_reconn_interval = setInterval(() => {
-                    this.initWebsocket()
-                }, 4000)
-            })
-        }
+		return true  // ADD THIS LINE HERE
+	}
 
-        this.ws.send(JSON.stringify(msg))
-        return true
-    }
+	sendWS(msg) {
+		console.log('sendWS called, WebSocket state:', this.ws ? this.ws.readyState : 'null')
+		
+		if(!this.ws) {
+			console.log('No WebSocket connection')
+			return false
+		}
+
+		let states = ['connecting', 'open', 'closing', 'closed']
+		if(this.ws.readyState !== 1) {
+			console.log('WebSocket not ready, state:', states[this.ws.readyState])
+			this.setState({
+				status_message: {
+					'type': 'error',
+					'message': `The connection is ${states[this.ws.readyState]}. Reconnecting...`,
+				}
+			}, () => {
+				this.ws_reconn_interval = setInterval(() => {
+					this.initWebsocket()
+				}, 4000)
+			})
+			return false
+		}
+
+		console.log('Sending WebSocket message with readyState 1 (open)')
+		this.ws.send(JSON.stringify(msg))
+		return true
+	}
 
     onSubmit(e) {
         e.preventDefault()
@@ -642,6 +669,7 @@ render() {
 				<NotifyLines onSubmit={this.submitMessage} console={this.state}/>
 				<PlayerList sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
 				<ServerBrowser sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
+				<SettingsPanel sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
 				<CurrentPlayerName/>
 			</>
 		)

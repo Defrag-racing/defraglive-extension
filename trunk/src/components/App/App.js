@@ -128,27 +128,18 @@ export default class App extends React.Component {
             })
         }
     }
-    
+
 render(){
-        if(this.state.finishedLoading && this.state.isVisible) {
-            return (
-                <div className={`app-wrap isMobile-${this.props.isMobile} theme-${this.state.theme} console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'} notify-${this.props.appstate.isNotifyOpen ? 'opened' : 'closed'} playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'} serverbrowser-${this.props.appstate.isServerBrowserOpen ? 'opened' : 'closed'} controls-${this.state.arePlayerControlsVisible ? 'visible' : 'hidden'}`}>
-                    <Console twitchUser={this.state.twitchUser}/>
-                </div>
-            )
-        } else {
-            return (
-                <div className="app-wrap"></div>
-            )
-        }
+    if(this.state.finishedLoading && this.state.isVisible) {
+        return (
+            <div className={`app-wrap isMobile-${this.props.isMobile} theme-${this.state.theme} console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'} notify-${this.props.appstate.isNotifyOpen ? 'opened' : 'closed'} playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'} serverbrowser-${this.props.appstate.isServerBrowserOpen ? 'opened' : 'closed'} settingspanel-${this.props.appstate.isSettingsPanelOpen ? 'opened' : 'closed'} controls-${this.state.arePlayerControlsVisible ? 'visible' : 'hidden'}`}>
+                <Console twitchUser={this.state.twitchUser}/>
+            </div>
+        )
+    } else {
+        return (
+            <div className="app-wrap"></div>
+        )
     }
 }
-
-/*
-<p>Hello world! <input type="button" value="Minimize" onClick={this.twitch.actions.minimize}/></p>
-<p>IsVisible: {this.state.isVisible ? 'Yes': 'No'}</p>
-<p>My token is: {this.Authentication.state.token}</p>
-<p>My opaque ID is {this.Authentication.getOpaqueId()}.</p>
-<div>{this.Authentication.isModerator() ? <p>I am currently a mod, and here's a special mod button <input value='mod button' type='button'/></p>  : 'I am currently not a mod.'}</div>
-<p>I have {this.Authentication.hasSharedId() ? `shared my ID, and my user_id is ${this.Authentication.getUserId()}` : 'not shared my ID'}.</p>
-*/
+}

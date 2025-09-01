@@ -2826,3 +2826,306 @@ body {
         background: rgba(145, 71, 255, 0.4);
     }
 }
+
+// -----------------------------------------------------------------
+// - Settings Panel
+// -----------------------------------------------------------------
+
+.settingspanel-opened {
+    .settingspanel-button {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 25px;
+    }
+
+    .settingspanel-content-wrap {
+        display: flex;
+        animation: playerlist-show $duration-fast02 $motion-entrance-productive;
+    }
+
+    .settingspanel-wrap {
+        z-index: 6;
+    }
+}
+.settingspanel-closed {
+    .settingspanel-content-wrap {
+        display: none;
+    }
+}
+
+.settingspanel-wrap {
+    position: absolute;
+    left: 15px;
+    top: 0;
+    min-height: 200px;
+    z-index: 3;
+
+    .settingspanel-button {
+        position: absolute;
+        left: 0;
+        top: 310px;
+        width: 30px;
+        height: 30px;
+        font-size: 1.5rem;
+        text-align: center;
+        line-height: 30px;
+        font-weight: normal;
+        z-index: 2;
+        cursor: pointer;
+        transition: opacity 125ms ease-in;
+        transition: transform $duration-fast02 $motion-entrance-productive;
+        user-select: none;
+    
+        &:hover {
+            transform: scale(1.1);
+        }
+    }
+
+    .settingspanel-svg {
+        fill: #9147FF;
+        width: 30px;
+        height: 30px;
+
+        &.opened {
+            fill: #fff;
+        }
+    }
+}
+
+.settingspanel-content-wrap {
+    position: absolute;
+    left: 50px;
+    top: 0;
+    width: 60%;
+    min-width: 500px;
+    max-width: 900px;
+    padding: 100px 0 5rem 0;
+    display: flex;
+    align-items: stretch;
+    box-sizing: border-box;
+    user-select: none;
+
+    @include mq($until: tablet) {
+        min-width: 350px;
+        width: 95%;
+    }
+}
+
+.settingspanel-content {
+    transition: opacity 125ms ease-in;
+    transition: transform $duration-fast02 $motion-entrance-productive;
+    box-shadow: rgba(0, 0, 0, 0.2) 5px 5px 20px;
+    width: 100%;
+    overflow: auto;
+    border-radius: 5px;
+    padding: 20px;
+    max-height: calc(100vh - 200px);
+
+    .header-top {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .h1 {
+            font-size: 2rem;
+            font-weight: 200;
+        }
+
+        .close {
+            cursor: pointer;
+            transition: transform $duration-fast02 $motion-entrance-productive;
+
+            &:hover {
+                transform: scale(1.1);
+            }
+
+            svg {
+                width: 25px;
+                height: 25px;
+            }
+        }
+    }
+
+    .settings-section {
+        margin-bottom: 25px;
+        padding: 15px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #9147FF;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.1);
+
+            .setting-label {
+                font-weight: 500;
+                font-size: 0.9rem;
+            }
+
+            .setting-control {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+
+                .range-input {
+                    width: 100px;
+                }
+
+                .toggle-switch {
+                    width: 40px;
+                    height: 20px;
+                    background: #333;
+                    border-radius: 10px;
+                    position: relative;
+                    cursor: pointer;
+                    transition: background 0.3s;
+
+                    &.active {
+                        background: #9147FF;
+                    }
+
+                    &::after {
+                        content: '';
+                        position: absolute;
+                        width: 16px;
+                        height: 16px;
+                        background: white;
+                        border-radius: 50%;
+                        top: 2px;
+                        left: 2px;
+                        transition: transform 0.3s;
+                    }
+
+                    &.active::after {
+                        transform: translateX(20px);
+                    }
+                }
+            }
+        }
+    }
+
+    .settings-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+
+            &.btn-primary {
+                background: #9147FF;
+                color: white;
+
+                &:hover {
+                    background: #7137c7;
+                }
+
+                &:disabled {
+                    background: #555;
+                    cursor: not-allowed;
+                }
+            }
+
+            &.btn-secondary {
+                background: transparent;
+                color: #9147FF;
+                border: 2px solid #9147FF;
+
+                &:hover {
+                    background: rgba(145, 71, 255, 0.1);
+                }
+            }
+        }
+    }
+}
+
+// Theme-specific styles
+.theme-light {
+    .settingspanel-content {
+        background-color: rgba(230, 230, 235, 0.9);
+        background-image: url('../img/q3logo_5p.png');
+
+        .header-top {
+            .h1 {
+                color: #7137c7;
+            }
+            .close svg {
+                fill: rgb(100, 100, 100);
+            }
+        }
+
+        .settings-section {
+            background: rgba(0, 0, 0, 0.05);
+
+            .setting-item {
+                background: rgba(255, 255, 255, 0.3);
+            }
+        }
+    }
+}
+
+.theme-dark {
+    .settingspanel-content {
+        background-color: rgba(30, 30, 35, 0.9);
+        background-image: url('../img/q3logo_20p.png');
+
+        .header-top {
+            .h1 {
+                color: #a96fff;
+            }
+            .close svg {
+                fill: rgb(100, 100, 100);
+            }
+        }
+    }
+}
+
+// Control visibility for settings panel button
+.controls-visible {
+    .settingspanel-button {
+        transform: translateX(0);
+        opacity: 1.0;
+    }
+}
+.controls-hidden:not(.settingspanel-opened):not(:hover) {
+    .settingspanel-button {
+        transform: translateX(-10px);
+        opacity: 0;
+    }
+}
+
+// Mobile adjustments
+.isMobile-true {
+    .settingspanel-content-wrap {
+        width: 95%;
+        min-width: 300px;
+    }
+
+    .settingspanel-button {
+        transform: translateX(0) !important;
+        opacity: 1.0 !important;
+    }
+}

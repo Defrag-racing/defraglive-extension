@@ -5,7 +5,8 @@ const defaultAppState = {
     isConsoleOpen: false,
     isNotifyOpen: false,
     isPlayerlistOpen: false,
-    isServerBrowserOpen: false,  // Added server browser state
+    isServerBrowserOpen: false,
+    isSettingsPanelOpen: false,
 }
 const defaultServerState = {
     'initialized': false,
@@ -57,7 +58,17 @@ export const appState = {
                 isPlayerlistOpen: false,
                 isServerBrowserOpen: !state.isServerBrowserOpen,
             }
-        }
+        },
+
+		TOGGLE_SETTINGSPANEL: (state, data) => {
+			return {
+				isConsoleOpen: false,
+				isNotifyOpen: false,
+				isPlayerlistOpen: false,
+				isServerBrowserOpen: false,
+				isSettingsPanelOpen: !state.isSettingsPanelOpen,
+			}
+		},
     },
     effects: (dispatch) => ({
         toggleConsole() {
@@ -76,6 +87,10 @@ export const appState = {
         toggleServerBrowser() {
             dispatch.appState.TOGGLE_SERVERBROWSER()
         },
+
+		toggleSettingsPanel() {
+			dispatch.appState.TOGGLE_SETTINGSPANEL()  // ← Change to TOGGLE_SETTINGSPANEL
+		},
     })
 }
 
@@ -123,7 +138,7 @@ export const mapDispatch = (dispatch) => ({
     toggleNotify: () => dispatch.appState.toggleNotify(),
     togglePlayerlist: () => dispatch.appState.togglePlayerlist(),
     toggleServerBrowser: () => dispatch.appState.toggleServerBrowser(),  // Added server browser dispatch
-
+	toggleSettingsPanel: () => dispatch.appState.toggleSettingsPanel(),
     getServerstate: () => dispatch.serverState.getServerstate(),
     updateServerstate: (data) => dispatch.serverState.updateServerstate(data),
 })
