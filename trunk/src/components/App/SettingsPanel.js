@@ -10,7 +10,7 @@ const SETTING_DEFAULTS = {
     fullbright: false,  // Changed to boolean for toggle
     // Visual/Graphics (no restart)
     gamma: 1.2,
-    sky: false,
+    sky: true,
     triggers: false,
     clips: false,
     slick: false,
