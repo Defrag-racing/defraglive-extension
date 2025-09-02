@@ -12,16 +12,26 @@ export function CurrentPlayerNameLoader(props) {
 function CurrentPlayerNameBase(props) {
     // Add safety checks
     if (!props.serverstate || !props.serverstate.current_player) {
-        return (
-            <div className="curr-player-wrap">
-                Loading...
-            </div>
-        )
+        // Check if we're actually loading vs just no player to spectate
+        if (!props.serverstate) {
+            return (
+                <div className="curr-player-wrap">
+                    Loading...
+                </div>
+            )
+        } else {
+            // We have serverstate but no current player (standby mode)
+            return (
+                <div className="curr-player-wrap">
+                    {/* Show nothing or a standby message */}
+                </div>
+            )
+        }
     }
     
     return (
         <div className="curr-player-wrap">
-            {props.serverstate.current_player.n}
+            <Q3STR s={props.serverstate.current_player.n}/>
         </div>
     )
 }

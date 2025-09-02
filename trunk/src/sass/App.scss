@@ -2952,6 +2952,12 @@ body {
         border-radius: 8px;
         background: rgba(255, 255, 255, 0.05);
 
+        // Special styling for video restart section
+        &.vid-restart-section {
+            border: 2px solid #9147FF;
+            background: rgba(145, 71, 255, 0.1);
+        }
+
         .section-title {
             font-size: 1.3rem;
             font-weight: 600;
@@ -2985,6 +2991,12 @@ body {
 
                 .range-input {
                     width: 100px;
+                    
+                    // Disabled state for range inputs
+                    &:disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                    }
                 }
 
                 .toggle-switch {
@@ -2998,6 +3010,16 @@ body {
 
                     &.active {
                         background: #9147FF;
+                    }
+
+                    // Disabled state for toggle switches
+                    &.disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                        
+                        &:hover {
+                            transform: none;
+                        }
                     }
 
                     &::after {
@@ -3058,6 +3080,88 @@ body {
                     background: rgba(145, 71, 255, 0.1);
                 }
             }
+            
+            // Disabled state for buttons
+            &.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                
+                &:hover {
+                    background: #555 !important;
+                    transform: none;
+                }
+            }
+        }
+    }
+}
+
+// Confirmation Dialog Overlay - NEW
+.confirmation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.confirmation-dialog {
+    background: #2a2a2a;
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    color: white;
+    
+    h3 {
+        margin-top: 0;
+        color: #ff9800;
+    }
+    
+    ul {
+        margin: 15px 0;
+        padding-left: 20px;
+        
+        li {
+            margin: 5px 0;
+            color: #ccc;
+        }
+    }
+    
+    .confirmation-buttons {
+        display: flex;
+        gap: 15px;
+        margin-top: 25px;
+        justify-content: flex-end;
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            
+            &.btn-primary {
+                background: #9147FF;
+                color: white;
+                
+                &:hover {
+                    background: #7137c7;
+                }
+            }
+            
+            &.btn-secondary {
+                background: transparent;
+                color: #9147FF;
+                border: 2px solid #9147FF;
+                
+                &:hover {
+                    background: rgba(145, 71, 255, 0.1);
+                }
+            }
         }
     }
 }
@@ -3080,9 +3184,27 @@ body {
         .settings-section {
             background: rgba(0, 0, 0, 0.05);
 
+            &.vid-restart-section {
+                border-color: #7137c7;
+                background: rgba(113, 55, 199, 0.1);
+            }
+
             .setting-item {
                 background: rgba(255, 255, 255, 0.3);
             }
+        }
+    }
+    
+    .confirmation-dialog {
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        
+        h3 {
+            color: #f57c00;
+        }
+        
+        li {
+            color: #666;
         }
     }
 }
