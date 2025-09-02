@@ -66,13 +66,10 @@ class PlayerListBase extends React.Component {
     
     // Add the missing toggle method
 	toggle() {
-		console.log('[PlayerList] Button clicked. Current state:', this.props.appstate.isPlayerlistOpen)
 		// Check if we're about to open (currently closed)
 		if (!this.props.appstate.isPlayerlistOpen) {
-			console.log('[PlayerList] Opening panel - fetching fresh server data...')
 			this.fetchServerData()
 		} else {
-			console.log('[PlayerList] Closing panel - no fetch needed')
 		}
 		this.props.togglePlayerlist()
 	}
@@ -102,10 +99,7 @@ class PlayerListBase extends React.Component {
         }
     }
 
-	async fetchServerData() {
-		console.log('[PlayerList] Refresh button clicked - fetching server data...')
-		console.log('[PlayerList] Timestamp:', new Date().toISOString())
-		
+	async fetchServerData() {		
 		try {
 			// Prevent multiple simultaneous refreshes
 			if (this.state.isRefreshing) {
@@ -114,20 +108,12 @@ class PlayerListBase extends React.Component {
 			}
 			
 			this.setState({ isRefreshing: true, refreshSuccess: false });
-			console.log('[PlayerList] Starting refresh...')
 			
 			// Get current server IP and player data from bot (always available)
 			const serverstateResponse = await fetch('https://tw.defrag.racing/serverstate.json')
 			const serverstate = await serverstateResponse.json()
 			
-			console.log('[PlayerList] Serverstate fetched:', {
-				ip: serverstate.ip,
-				playerCount: Object.keys(serverstate.players || {}).length,
-				mapname: serverstate.mapname
-			})
-			
 			if (!serverstate.ip) {
-				console.log('[PlayerList] No server IP found, aborting refresh')
 				this.setState({ isRefreshing: false, refreshSuccess: false });
 				return
 			}
@@ -137,17 +123,10 @@ class PlayerListBase extends React.Component {
 			let hasSpectatorData = false
 			
 			try {
-				console.log('[PlayerList] Fetching detailed server info from servers API...')
 				const serversResponse = await fetch('https://defrag.racing/servers/json')
 				const serversData = await serversResponse.json()
 				currentServerInfo = serversData.active?.[serverstate.ip] || {}
 				hasSpectatorData = !!currentServerInfo.scores?.players
-				
-				console.log('[PlayerList] Server info fetched:', {
-					hasSpectatorData: hasSpectatorData,
-					serverName: currentServerInfo?.hostname,
-					playerScores: currentServerInfo.scores?.players?.length || 0
-				})
 			} catch (error) {
 				console.error('[PlayerList] Could not fetch spectator data from servers API:', error)
 			}
@@ -160,13 +139,10 @@ class PlayerListBase extends React.Component {
 				isRefreshing: false,
 				refreshSuccess: true
 			});
-			
-			console.log('[PlayerList] Refresh completed successfully')
-			
+						
 			// Clear success indicator after 2 seconds
 			setTimeout(() => {
 				this.setState({ refreshSuccess: false });
-				console.log('[PlayerList] Success indicator cleared')
 			}, 2000);
 			
 		} catch (error) {
@@ -455,7 +431,6 @@ class PlayerListBase extends React.Component {
 							<div className="h1">Player List</div>
 							<div className="header-controls">
 								<div className="refresh-button" onClick={() => {
-									console.log('[PlayerList] Manual refresh triggered via button click')
 									this.fetchServerData()
 								}} title="Refresh Player List" style={{ transform: 'scale(1.6)' }}>
 									<svg className="refresh-svg animated-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ 

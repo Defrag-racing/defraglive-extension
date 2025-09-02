@@ -2,6 +2,7 @@ import React from 'react'
 import Authentication from '../../util/Authentication/Authentication'
 
 import { Console } from './Console'
+import { IdleServerBrowserArrow } from './IdleServerBrowserArrow'
 
 import '../../sass/App.scss'
 
@@ -134,6 +135,7 @@ render(){
         return (
             <div className={`app-wrap isMobile-${this.props.isMobile} theme-${this.state.theme} console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'} notify-${this.props.appstate.isNotifyOpen ? 'opened' : 'closed'} playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'} serverbrowser-${this.props.appstate.isServerBrowserOpen ? 'opened' : 'closed'} settingspanel-${this.props.appstate.isSettingsPanelOpen ? 'opened' : 'closed'} controls-${this.state.arePlayerControlsVisible ? 'visible' : 'hidden'}`}>
                 <Console twitchUser={this.state.twitchUser}/>
+				    <IdleServerBrowserArrow />
             </div>
         )
     } else {

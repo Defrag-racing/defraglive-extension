@@ -88,7 +88,7 @@ class ConsoleBase extends React.Component {
 
     sendTranslationRequest(cacheKey, text, messageId) {
         if (!this.ws || this.ws.readyState !== 1) {
-            console.warn('WebSocket not connected, cannot send translation request');
+            // console.warn('WebSocket not connected, cannot send translation request');
             return false;
         }
 
@@ -107,10 +107,8 @@ class ConsoleBase extends React.Component {
 
         try {
             this.ws.send(JSON.stringify(translationMessage));
-            console.log('Translation request sent:', cacheKey);
             return true;
         } catch (error) {
-            console.error('Failed to send translation request:', error);
             return false;
         }
     }
@@ -504,8 +502,6 @@ submitMessage(e, inputEl) {
             return false
         }
 
-		console.log('sendCommand called with:', cmd)  // ADD THIS DEBUG LINE
-
         let msg = cmd
 
         let new_msg = {
@@ -517,8 +513,6 @@ submitMessage(e, inputEl) {
             },
         }
 
-    console.log('Sending WebSocket message:', new_msg)  // ADD THIS DEBUG LINE
-
 		let ok = this.sendWS(new_msg)
 		if(!ok) {
 			return false
@@ -528,7 +522,6 @@ submitMessage(e, inputEl) {
 	}
 
 	sendWS(msg) {
-		console.log('sendWS called, WebSocket state:', this.ws ? this.ws.readyState : 'null')
 		
 		if(!this.ws) {
 			console.log('No WebSocket connection')
@@ -537,7 +530,6 @@ submitMessage(e, inputEl) {
 
 		let states = ['connecting', 'open', 'closing', 'closed']
 		if(this.ws.readyState !== 1) {
-			console.log('WebSocket not ready, state:', states[this.ws.readyState])
 			this.setState({
 				status_message: {
 					'type': 'error',
@@ -551,7 +543,6 @@ submitMessage(e, inputEl) {
 			return false
 		}
 
-		console.log('Sending WebSocket message with readyState 1 (open)')
 		this.ws.send(JSON.stringify(msg))
 		return true
 	}

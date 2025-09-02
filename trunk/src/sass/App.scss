@@ -2971,76 +2971,134 @@ body {
             gap: 15px;
         }
 
-        .setting-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-radius: 5px;
-            background: rgba(0, 0, 0, 0.1);
+		.setting-item {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 10px;
+			border-radius: 5px;
+			background: rgba(0, 0, 0, 0.1);
 
-            .setting-label {
-                font-weight: 500;
-                font-size: 0.9rem;
-            }
+			// Special full-width layout for gamma buttons
+			&.gamma-buttons {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 10px;
 
-            .setting-control {
-                display: flex;
-                align-items: center;
-                gap: 8px;
+				.setting-label {
+					text-align: center;
+					margin-bottom: 5px;
+				}
 
-                .range-input {
-                    width: 100px;
-                    
-                    // Disabled state for range inputs
-                    &:disabled {
-                        opacity: 0.5;
-                        cursor: not-allowed;
-                    }
-                }
+				.setting-control {
+					justify-content: center;
+					
+					.gamma-button-group {
+						display: flex;
+						gap: 8px;
+						flex-wrap: wrap;
+						justify-content: center;
+					}
 
-                .toggle-switch {
-                    width: 40px;
-                    height: 20px;
-                    background: #333;
-                    border-radius: 10px;
-                    position: relative;
-                    cursor: pointer;
-                    transition: background 0.3s;
+					.gamma-btn {
+						background: rgba(255, 255, 255, 0.1);
+						border: 2px solid rgba(255, 255, 255, 0.3);
+						color: #fff;
+						padding: 8px 12px;
+						border-radius: 5px;
+						cursor: pointer;
+						font-size: 0.9rem;
+						font-weight: 500;
+						transition: all 0.3s;
+						min-width: 50px;
 
-                    &.active {
-                        background: #9147FF;
-                    }
+						&:hover:not(.disabled) {
+							background: rgba(255, 255, 255, 0.2);
+							transform: scale(1.05);
+						}
 
-                    // Disabled state for toggle switches
-                    &.disabled {
-                        opacity: 0.5;
-                        cursor: not-allowed;
-                        
-                        &:hover {
-                            transform: none;
-                        }
-                    }
+						&.active {
+							background: #9147FF;
+							border-color: #9147FF;
+							color: white;
+							font-weight: 600;
+						}
 
-                    &::after {
-                        content: '';
-                        position: absolute;
-                        width: 16px;
-                        height: 16px;
-                        background: white;
-                        border-radius: 50%;
-                        top: 2px;
-                        left: 2px;
-                        transition: transform 0.3s;
-                    }
+						&.disabled {
+							opacity: 0.5;
+							cursor: not-allowed;
+							
+							&:hover {
+								transform: none;
+								background: rgba(255, 255, 255, 0.1);
+							}
+						}
+					}
+				}
+			}
 
-                    &.active::after {
-                        transform: translateX(20px);
-                    }
-                }
-            }
-        }
-    }
+			.setting-label {
+				font-weight: 500;
+				font-size: 0.9rem;
+			}
+
+			.setting-control {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+
+				.range-input {
+					width: 100px;
+					
+					// Disabled state for range inputs
+					&:disabled {
+						opacity: 0.5;
+						cursor: not-allowed;
+					}
+				}
+
+				.toggle-switch {
+					width: 40px;
+					height: 20px;
+					background: #333;
+					border-radius: 10px;
+					position: relative;
+					cursor: pointer;
+					transition: background 0.3s;
+
+					&.active {
+						background: #9147FF;
+					}
+
+					// Disabled state for toggle switches
+					&.disabled {
+						opacity: 0.5;
+						cursor: not-allowed;
+						
+						&:hover {
+							transform: none;
+						}
+					}
+
+					&::after {
+						content: '';
+						position: absolute;
+						width: 16px;
+						height: 16px;
+						background: white;
+						border-radius: 50%;
+						top: 2px;
+						left: 2px;
+						transition: transform 0.3s;
+					}
+
+					&.active::after {
+						transform: translateX(20px);
+					}
+				}
+			}
+		}
+	}
 
     .settings-actions {
         display: flex;
@@ -3249,5 +3307,164 @@ body {
     .settingspanel-button {
         transform: translateX(0) !important;
         opacity: 1.0 !important;
+    }
+}
+
+// -----------------------------------------------------------------
+// - Idle Server Browser Arrow Animation
+// -----------------------------------------------------------------
+
+.idle-server-arrow-container {
+    position: absolute;
+    left: 60px; // Position right next to the server browser button
+    top: 245px; // Align with the server browser button
+    z-index: 10;
+    pointer-events: none; // Don't interfere with clicking
+    user-select: none;
+}
+
+.idle-arrow-message {
+    position: absolute;
+    left: -50px;
+    top: -35px;
+    background: rgba(145, 71, 255, 0.95);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(145, 71, 255, 0.6);
+    border: 2px solid #9147FF;
+    
+    // Speech bubble arrow pointing down to the button
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-top: 10px solid #9147FF;
+    }
+}
+
+.idle-arrow {
+    width: 40px;
+    height: 40px;
+    color: #9147FF;
+    animation: 
+        idle-bounce 1s ease-in-out infinite,
+        idle-glow 2s ease-in-out infinite;
+    
+    .arrow-svg {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 0 10px rgba(145, 71, 255, 0.8));
+        // Rotate to point left towards the server browser button
+        transform: rotate(90deg);
+    }
+}
+
+// Bounce animation for the arrow
+@keyframes idle-bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateX(0) rotate(90deg);
+    }
+    40% {
+        transform: translateX(-8px) rotate(90deg);
+    }
+    60% {
+        transform: translateX(-4px) rotate(90deg);
+    }
+}
+
+// Glow animation for extra attention
+@keyframes idle-glow {
+    0%, 100% {
+        filter: drop-shadow(0 0 10px rgba(145, 71, 255, 0.8));
+    }
+    50% {
+        filter: drop-shadow(0 0 20px rgba(145, 71, 255, 1));
+    }
+}
+
+// Theme-specific styles
+.theme-light {
+    .idle-arrow-message {
+        background: rgba(113, 55, 199, 0.95);
+        border-color: #7137c7;
+        box-shadow: 0 4px 20px rgba(113, 55, 199, 0.6);
+        
+        &::after {
+            border-top-color: #7137c7;
+        }
+    }
+    
+    .idle-arrow {
+        color: #7137c7;
+        
+        .arrow-svg {
+            filter: drop-shadow(0 0 10px rgba(113, 55, 199, 0.8));
+        }
+    }
+    
+    @keyframes idle-glow {
+        0%, 100% {
+            filter: drop-shadow(0 0 10px rgba(113, 55, 199, 0.8));
+        }
+        50% {
+            filter: drop-shadow(0 0 20px rgba(113, 55, 199, 1));
+        }
+    }
+}
+
+.theme-dark {
+    .idle-arrow-message {
+        background: rgba(145, 71, 255, 0.95);
+        border-color: #9147FF;
+        box-shadow: 0 4px 20px rgba(145, 71, 255, 0.6);
+        
+        &::after {
+            border-top-color: #9147FF;
+        }
+    }
+    
+    .idle-arrow {
+        color: #9147FF;
+        
+        .arrow-svg {
+            filter: drop-shadow(0 0 10px rgba(145, 71, 255, 0.8));
+        }
+    }
+}
+
+// Hide arrow when any panel is open
+.app-wrap.console-opened .idle-server-arrow-container,
+.app-wrap.playerlist-opened .idle-server-arrow-container,
+.app-wrap.serverbrowser-opened .idle-server-arrow-container,
+.app-wrap.notify-opened .idle-server-arrow-container,
+.app-wrap.settingspanel-opened .idle-server-arrow-container {
+    display: none;
+}
+
+// Mobile adjustments
+.isMobile-true {
+    .idle-server-arrow-container {
+        left: 65px;
+        top: 250px;
+        
+        .idle-arrow-message {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+        }
+        
+        .idle-arrow {
+            width: 35px;
+            height: 35px;
+        }
     }
 }

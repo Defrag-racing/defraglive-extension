@@ -317,25 +317,28 @@ class SettingsPanelBase extends React.Component {
                         <div className="settings-section">
                             <div className="section-title">Visual Settings (Instant - 15s cooldown)</div>
                             <div className="settings-grid">
-                                <div className="setting-item">
-                                    <div className="setting-label">Gamma (1.0-1.6)</div>
-                                    <div className="setting-control">
-                                        <input 
-                                            type="range" 
-                                            min="1.0" 
-                                            max="1.6" 
-                                            step="0.1"
-                                            value={this.state.currentSettings.gamma}
-                                            onChange={(e) => this.updateInstantSetting('gamma', parseFloat(e.target.value))}
-                                            className="range-input"
-                                            disabled={this.isOnCooldown('gamma')}
-                                        />
-                                        <span>
-                                            {this.state.currentSettings.gamma}
-                                            {this.isOnCooldown('gamma') && ` (${this.getCooldownRemaining('gamma')}s)`}
-                                        </span>
-                                    </div>
-                                </div>
+								<div className="setting-item gamma-buttons">
+									<div className="setting-label">Gamma</div>
+									<div className="setting-control">
+										<div className="gamma-button-group">
+											{[1.0, 1.1, 1.2, 1.3, 1.4, 1.5].map(value => (
+												<button
+													key={value}
+													className={`gamma-btn ${this.state.currentSettings.gamma === value ? 'active' : ''} ${this.isOnCooldown('gamma') ? 'disabled' : ''}`}
+													onClick={() => !this.isOnCooldown('gamma') && this.updateInstantSetting('gamma', value)}
+													disabled={this.isOnCooldown('gamma')}
+												>
+													{value}
+												</button>
+											))}
+										</div>
+										{this.isOnCooldown('gamma') && (
+											<span style={{ marginLeft: '8px', fontSize: '0.8em', opacity: 0.7 }}>
+												{this.getCooldownRemaining('gamma')}s
+											</span>
+										)}
+									</div>
+								</div>
                                 
                                 {['sky', 'triggers', 'clips', 'slick'].map(key => (
                                     <div className="setting-item" key={key}>

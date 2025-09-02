@@ -46,7 +46,6 @@ class ServerBrowserBase extends React.Component {
 		// Add periodic refresh every 30 seconds when server browser is open
 		this.refreshInterval = setInterval(() => {
 			if (this.props.appstate.isServerBrowserOpen) {
-				console.log('[ServerBrowser] Automatic refresh triggered (15s interval)')
 				this.fetchServers()
 			}
 		}, 15000)
@@ -59,35 +58,24 @@ class ServerBrowserBase extends React.Component {
 	}
 
 	toggle() {
-		console.log('[ServerBrowser] Button clicked. Current state:', this.props.appstate.isServerBrowserOpen)
 		// Check if we're about to open (currently closed)  
 		if (!this.props.appstate.isServerBrowserOpen) {
-			console.log('[ServerBrowser] Opening panel - fetching fresh server data...')
 			this.fetchServers()
 		} else {
-			console.log('[ServerBrowser] Closing panel - no fetch needed')
 		}
 		this.props.toggleServerBrowser()
 	}
 
-    async fetchServers() {
-		console.log('[ServerBrowser] Fetching servers...')
-		console.log('[ServerBrowser] Timestamp:', new Date().toISOString())
-		
+    async fetchServers() {		
 		if (this.state.loading) {
-			console.log('[ServerBrowser] Already loading, skipping duplicate request')
 			return;
 		}
 		
-        this.setState({ loading: true, error: null })
-		console.log('[ServerBrowser] Loading state set to true')
-        
+        this.setState({ loading: true, error: null })        
         try {
-			console.log('[ServerBrowser] Making API request to https://defrag.racing/servers/json')
             const response = await fetch('https://defrag.racing/servers/json')
 			
             if (!response.ok) {
-				console.error('[ServerBrowser] API response not OK:', response.status, response.statusText)
                 throw new Error('Failed to fetch servers')
             }
             
@@ -95,37 +83,12 @@ class ServerBrowserBase extends React.Component {
 			const activeServers = data.active || {}
 			const serverCount = Object.keys(activeServers).length
 			
-			console.log('[ServerBrowser] Servers fetched successfully:', {
-				totalServers: serverCount,
-				serverAddresses: Object.keys(activeServers),
-				timestamp: new Date().toISOString()
-			})
-			
-			// Log details about each server
-			Object.entries(activeServers).forEach(([address, server]) => {
-				console.log(`[ServerBrowser] Server ${address}:`, {
-					hostname: server.hostname,
-					map: server.map,
-					playerCount: Object.keys(server.players || {}).length,
-					physics: server.defrag
-				})
-			})
-			
             this.setState({ 
                 servers: activeServers,
                 loading: false 
             })
-			
-			console.log('[ServerBrowser] State updated with new server data')
-			
+		
         } catch (error) {
-            console.error('[ServerBrowser] Error fetching servers:', error)
-			console.error('[ServerBrowser] Error details:', {
-				message: error.message,
-				stack: error.stack,
-				timestamp: new Date().toISOString()
-			})
-			
             this.setState({ 
                 error: 'Failed to load servers',
                 loading: false 
@@ -134,8 +97,6 @@ class ServerBrowserBase extends React.Component {
     }
 
     refreshServers() {
-		console.log('[ServerBrowser] Manual refresh triggered via button click')
-		console.log('[ServerBrowser] Current server count:', Object.keys(this.state.servers).length)
         this.fetchServers()
     }
 
@@ -480,7 +441,6 @@ class ServerBrowserBase extends React.Component {
                             <div className="h1">Server Browser</div>
 							<div className="header-controls">
 								<div className="refresh-button" onClick={() => {
-									console.log('[ServerBrowser] Refresh button clicked')
 									this.refreshServers()
 								}} title="Refresh Server List" style={{ transform: 'scale(1.6)' }}>
 									<svg className="refresh-svg animated-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ 
