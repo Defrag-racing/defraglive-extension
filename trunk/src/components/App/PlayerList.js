@@ -100,7 +100,6 @@ class PlayerListBase extends React.Component {
 		try {
 			// Prevent multiple simultaneous refreshes
 			if (this.state.isRefreshing) {
-				console.log('[PlayerList] Refresh already in progress, skipping...')
 				return;
 			}
 			
@@ -293,14 +292,11 @@ class PlayerListBase extends React.Component {
         // Filter out the bot player using configurable secret
         const serverstatePlayersNonBot = serverstatePlayersRaw.filter(player => !this.isBotPlayer(player))
         
-        console.log('[PlayerList] Serverstate players count:', serverstatePlayersNonBot.length)
-        
         // Try to enrich serverstate data with API data if available
         let enrichedPlayers = []
         
         if (this.state.hasSpectatorData && this.state.serverInfo?.scores?.players) {
             const apiScores = this.state.serverInfo.scores.players
-            console.log('[PlayerList] API scores available:', apiScores.length)
             
             // Enrich serverstate players with API data
             enrichedPlayers = serverstatePlayersNonBot.map(player => {
@@ -350,13 +346,11 @@ class PlayerListBase extends React.Component {
             }))
             
             if (apiOnlyPlayers.length > 0) {
-                console.log('[PlayerList] Found API-only players:', apiOnlyPlayers.length)
                 enrichedPlayers = [...enrichedPlayers, ...apiOnlyPlayers]
             }
             
         } else {
             // No API data available, use serverstate only
-            console.log('[PlayerList] Using serverstate data only (no API spectator data)')
             enrichedPlayers = serverstatePlayersNonBot.map(player => ({
                 ...player,
                 time: 0,
@@ -369,13 +363,6 @@ class PlayerListBase extends React.Component {
                 dataSource: 'serverstate-only'
             }))
         }
-        
-        console.log('[PlayerList] Final enriched players:', enrichedPlayers.length, enrichedPlayers.map(p => ({
-            name: p.n,
-            source: p.dataSource,
-            team: p.t,
-            follow_num: p.follow_num
-        })))
         
         return enrichedPlayers
     }
