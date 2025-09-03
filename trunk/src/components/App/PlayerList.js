@@ -53,7 +53,6 @@ class PlayerListBase extends React.Component {
         this.spec_timeout = null
         this.refreshInterval = null
         
-        // Add the missing toggle method binding
         this.toggle = this.toggle.bind(this)
         this.spectatePlayerID = this.spectatePlayerID.bind(this)
         this.requestSpectate = this.requestSpectate.bind(this)
@@ -64,12 +63,10 @@ class PlayerListBase extends React.Component {
         this.fetchServerData = this.fetchServerData.bind(this)
     }
     
-    // Add the missing toggle method
 	toggle() {
 		// Check if we're about to open (currently closed)
 		if (!this.props.appstate.isPlayerlistOpen) {
 			this.fetchServerData()
-		} else {
 		}
 		this.props.togglePlayerlist()
 	}
@@ -288,49 +285,99 @@ class PlayerListBase extends React.Component {
 		return player.c1 === botSecret;
 	}
 
+    // ENHANCED: This now prioritizes serverstate players and enriches them with API data when available
     getPlayerWithScores() {
-        const players = Object.values(this.props.serverstate.players || {})
+        // Always start with serverstate players (real-time data)
+        const serverstatePlayersRaw = Object.values(this.props.serverstate.players || {})
         
         // Filter out the bot player using configurable secret
-        const nonBotPlayers = players.filter(player => !this.isBotPlayer(player))
+        const serverstatePlayersNonBot = serverstatePlayersRaw.filter(player => !this.isBotPlayer(player))
         
-        // If we have spectator data from servers API, use it
+        console.log('[PlayerList] Serverstate players count:', serverstatePlayersNonBot.length)
+        
+        // Try to enrich serverstate data with API data if available
+        let enrichedPlayers = []
+        
         if (this.state.hasSpectatorData && this.state.serverInfo?.scores?.players) {
-            const scores = this.state.serverInfo.scores.players
+            const apiScores = this.state.serverInfo.scores.players
+            console.log('[PlayerList] API scores available:', apiScores.length)
             
-            return nonBotPlayers.map(player => {
-                const scoreData = scores.find(score => {
+            // Enrich serverstate players with API data
+            enrichedPlayers = serverstatePlayersNonBot.map(player => {
+                // Try to match by multiple criteria
+                const scoreData = apiScores.find(score => {
+                    // Try matching by player_num to various ID fields
                     const idMatch = score.player_num === parseInt(player.id)
                     const clientIdMatch = player.clientId && score.player_num === player.clientId
-                    return idMatch || clientIdMatch
+                    const nameMatch = score.name && score.name.toLowerCase() === player.n.toLowerCase()
+                    
+                    return idMatch || clientIdMatch || nameMatch
                 })
                 
                 const follow_num = scoreData ? scoreData.follow_num : -1
                 
                 return {
                     ...player,
+                    // Prefer serverstate data, supplement with API data
                     time: scoreData?.time || 0,
                     follow_num: follow_num,
                     team: follow_num === -1 ? '0' : '3',
-					t: player.t,
+                    t: player.t || (follow_num === -1 ? '0' : '3'), // Use serverstate 't' if available
                     nospec: player.nospec,
                     c1: player.c1,
-                    clientId: player.clientId || parseInt(player.id)
+                    clientId: player.clientId || parseInt(player.id),
+                    // Add data source indicator for debugging
+                    dataSource: scoreData ? 'serverstate+api' : 'serverstate-only'
                 }
             })
+            
+            // Check if there are API players not in serverstate (unlikely but possible)
+            const serverstatePlayerNames = serverstatePlayersNonBot.map(p => p.n.toLowerCase())
+            const apiOnlyPlayers = apiScores.filter(score => 
+                score.name && !serverstatePlayerNames.includes(score.name.toLowerCase())
+            ).map(score => ({
+                id: score.player_num,
+                n: score.name,
+                clientId: score.player_num,
+                time: score.time || 0,
+                follow_num: score.follow_num,
+                team: score.follow_num === -1 ? '0' : '3',
+                t: score.follow_num === -1 ? '0' : '3',
+                nospec: 0, // Default to spectatable
+                country: 'Unknown',
+                logged: false,
+                dataSource: 'api-only'
+            }))
+            
+            if (apiOnlyPlayers.length > 0) {
+                console.log('[PlayerList] Found API-only players:', apiOnlyPlayers.length)
+                enrichedPlayers = [...enrichedPlayers, ...apiOnlyPlayers]
+            }
+            
+        } else {
+            // No API data available, use serverstate only
+            console.log('[PlayerList] Using serverstate data only (no API spectator data)')
+            enrichedPlayers = serverstatePlayersNonBot.map(player => ({
+                ...player,
+                time: 0,
+                follow_num: -1,
+                team: player.t || '0', // Use serverstate team if available
+                t: player.t || '0',
+                nospec: player.nospec,
+                c1: player.c1,
+                clientId: player.clientId || parseInt(player.id),
+                dataSource: 'serverstate-only'
+            }))
         }
         
-        // Fallback: no spectator data available
-        return nonBotPlayers.map(player => ({
-            ...player,
-            time: 0,
-            follow_num: -1,
-            team: '0',
-			t: player.t,
-            nospec: player.nospec,
-            c1: player.c1,
-            clientId: player.clientId || parseInt(player.id)
-        }))
+        console.log('[PlayerList] Final enriched players:', enrichedPlayers.length, enrichedPlayers.map(p => ({
+            name: p.n,
+            source: p.dataSource,
+            team: p.t,
+            follow_num: p.follow_num
+        })))
+        
+        return enrichedPlayers
     }
 
     getPlayerStatus(player) {
@@ -354,6 +401,7 @@ class PlayerListBase extends React.Component {
                     {player.time > 0 && <div>Best Time: {this.formatTime(player.time)}</div>}
                     <div>Country: {player.country}</div>
                     {player.logged && <div>Status: Logged in</div>}
+                    <div>Data: {player.dataSource}</div>
                     {statuses.length > 0 && (
                         <div className="tooltip-status">
                             {statuses.map((status, idx) => (
@@ -378,8 +426,8 @@ class PlayerListBase extends React.Component {
     }
 
 	canSpectatePlayer(player) {        
-		// Don't allow spectating spectators (t === '3')
-		if (player.t === '3') {
+		// Don't allow spectating spectators (t === '3' or follow_num !== -1)
+		if (player.t === '3' || player.follow_num !== -1) {
 			return false;
 		}
 		
@@ -407,18 +455,26 @@ class PlayerListBase extends React.Component {
 		let svgClose = <svg className="playerlist-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Player List"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
 		
 		const playersWithScores = this.getPlayerWithScores()
-		const activePlayers = playersWithScores.filter(player => player.follow_num === -1 && player.t !== '3')
-		const allSpectators = playersWithScores.filter(player => player.follow_num !== -1)
+		const activePlayers = playersWithScores.filter(player => 
+			(player.follow_num === -1 || player.follow_num === undefined) && 
+			player.t !== '3'
+		)
+		const allSpectators = playersWithScores.filter(player => 
+			player.follow_num !== -1 && player.follow_num !== undefined
+		)
 
 		const isOnAfkCooldown = Date.now() < this.state.afkControlCooldown
 
-		// Use server data from API calls
-		const serverAddress = this.state.currentServerAddress || 'Unknown'
-		const serverName = this.state.serverName || 'Unknown Server'
+		// Use server data from API calls or fallback to serverstate
+		const serverAddress = this.state.currentServerAddress || this.props.serverstate.ip || 'Unknown'
+		const serverName = this.state.serverName || this.props.serverstate.hostname || 'Unknown Server'
 		const serverMap = this.props.serverstate.mapname || 'Unknown'
 		const serverPhysics = this.state.serverInfo?.defrag ? 
 							(PHYSICS_TYPES[this.state.serverInfo.defrag] || this.state.serverInfo.defrag.toUpperCase()) : 
 							(this.props.serverstate.df_promode === '1' ? 'CPM' : 'VQ3')
+		
+		// Calculate total player count from serverstate (most accurate)
+		const totalPlayerCount = Object.keys(this.props.serverstate.players || {}).length
 
 		return (
 			<div className={`playerlist-wrap playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'}`}>
@@ -520,7 +576,7 @@ class PlayerListBase extends React.Component {
 													{serverPhysics}
 												</span>
 												<span className="player-count-inline" style={{ fontSize: '0.7rem' }}>
-													Players: {Object.keys(this.props.serverstate.players || {}).length}
+													Players: {totalPlayerCount}
 												</span>
 											</div>
 										</div>
@@ -531,7 +587,12 @@ class PlayerListBase extends React.Component {
 									Click a player name to switch spectator POV. Or use twitch chat with "?n" to cycle through players. Players with 🙏 have nospec enabled - click the icon to request spectating.
 									{!this.state.hasSpectatorData && (
 										<div style={{ marginTop: '4px', color: '#ff9800', fontStyle: 'italic', fontSize: '0.6rem' }}>
-											Note: Spectator relationships not available for this server - only active players shown.
+											Note: Using real-time serverstate data. API spectator relationships may be outdated.
+										</div>
+									)}
+									{this.state.hasSpectatorData && (
+										<div style={{ marginTop: '4px', color: '#4CAF50', fontStyle: 'italic', fontSize: '0.6rem' }}>
+											Showing real-time serverstate data enhanced with API spectator info.
 										</div>
 									)}
 								</div>
@@ -540,7 +601,7 @@ class PlayerListBase extends React.Component {
 							{/* Right Column - Player Table */}
 							<div style={{ flex: '1', minWidth: '220px', maxWidth: '350px' }}>
 								<div className="content" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
-									{Object.keys(this.props.serverstate.players).length === 0 ? (
+									{playersWithScores.length === 0 ? (
 										<div className="no-players">No players available</div>
 									) : (
 										<div>
@@ -557,12 +618,7 @@ class PlayerListBase extends React.Component {
 															</span>
 															{this.state.hoveredHelp === 'player' && (
 																<div className="help-tooltip">
-																	Click a player name to spectate their POV. Players with 🙏 have nospec enabled - click to politely request spectating. "Spectate Next" cycles automatically.
-																	{!this.state.hasSpectatorData && (
-																		<div style={{ marginTop: '4px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '4px' }}>
-																			Spectator data unavailable for this server.
-																		</div>
-																	)}
+																	Click a player name to spectate their POV. Players with 🙏 have nospec enabled - click to politely request spectating. "Spectate Next" cycles automatically. Data shows real-time serverstate info{this.state.hasSpectatorData ? ' enhanced with API data' : ''}.
 																</div>
 															)}
 														</th>
@@ -597,10 +653,10 @@ class PlayerListBase extends React.Component {
 																					<span className="status-indicator">!</span>
 																				)}
 																				{/* Show different indicators for different reasons */}
-																				{!canSpectate && player.t === '3' && (
+																				{!canSpectate && (player.t === '3' || player.follow_num !== -1) && (
 																					<span className="spectator-indicator"> (Spectator)</span>
 																				)}
-																				{!canSpectate && player.t !== '3' && (
+																				{!canSpectate && player.t !== '3' && player.follow_num === -1 && (
 																					<span className="nospec-indicator"> (No Spectating)</span>
 																				)}
 																			</div>
@@ -706,11 +762,9 @@ class PlayerListBase extends React.Component {
 											
 											<div className="note m-t m-b" style={{ fontSize: '0.75rem', marginTop: '8px' }}>
 												Click on the player name to spectate that person. Players with 🙏 have nospec enabled.
-												{!this.state.hasSpectatorData && (
-													<div style={{ marginTop: '4px', fontSize: '0.7rem', opacity: '0.8' }}>
-														Server does not provide spectator relationship data.
-													</div>
-												)}
+												<div style={{ marginTop: '4px', fontSize: '0.7rem', opacity: '0.8' }}>
+													Showing {playersWithScores.length} players from serverstate{this.state.hasSpectatorData ? ' (enhanced with API data)' : ' (real-time data only)'}.
+												</div>
 											</div>
 										</div>
 									)}

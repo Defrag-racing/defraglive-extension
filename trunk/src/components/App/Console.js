@@ -55,6 +55,9 @@ class ConsoleBase extends React.Component {
         this.increaseFontSize = this.increaseFontSize.bind(this)
         this.decreaseFontSize = this.decreaseFontSize.bind(this)
         this.sendTranslationRequest = this.sendTranslationRequest.bind(this)
+
+        // NEW: Settings logging method
+        this.logSettingsChange = this.logSettingsChange.bind(this)
     }
 
     increaseFontSize() {
@@ -88,7 +91,6 @@ class ConsoleBase extends React.Component {
 
     sendTranslationRequest(cacheKey, text, messageId) {
         if (!this.ws || this.ws.readyState !== 1) {
-            // console.warn('WebSocket not connected, cannot send translation request');
             return false;
         }
 
@@ -147,9 +149,7 @@ class ConsoleBase extends React.Component {
             this.ws = null
         }
         
-        // this.ws = new WebSocket("ws://localhost:8443/ws")
         this.ws = new WebSocket("wss://tw.defrag.racing/ws")
-        //this.ws = new WebSocket("wss://tw.defrag.racing:8443/ws")
         this.ws.onmessage = this.onConsoleMessage
         this.ws.onerror = this.onError
         this.ws.onopen = this.onConnect
@@ -171,7 +171,6 @@ class ConsoleBase extends React.Component {
     onDisconnect(ev) {
         clearInterval(this.ws_reconn_interval)
 
-        // if code == 1000 means the connection closed normally
         if(ev.code != 1000) {
             if(!navigator.onLine) {
                 this.setState({
@@ -237,6 +236,64 @@ class ConsoleBase extends React.Component {
         })
     }
 
+    // NEW: Method to format settings changes for logging
+    logSettingsChange(settings, username) {
+        // Create a human-readable description of the changes
+        const settingNames = {
+            'brightness': 'Brightness',
+            'picmip': 'Texture Quality', 
+            'fullbright': 'Fullbright',
+            'gamma': 'Gamma',
+            'sky': 'Sky Rendering',
+            'triggers': 'Show Triggers',
+            'clips': 'Show Clips', 
+            'slick': 'Highlight Slick Surfaces',
+            'drawgun': 'Draw Gun',
+            'angles': 'Weapon Angles',
+            'lagometer': 'Lagometer',
+            'snaps': 'Snaps HUD',
+            'cgaz': 'CGaz HUD',
+            'speedinfo': 'Speed Info (CHS)',
+            'speedorig': 'Speed HUD Element',
+            'inputs': 'WASD Inputs',
+            'obs': 'OverBounces Indicator',
+            'nodraw': 'Players Visibility',
+            'thirdperson': 'Third Person View',
+            'miniview': 'Miniview Window',
+            'gibs': 'Gibs After Kill',
+            'blood': 'Blood After Kill'
+        }
+
+        const changes = Object.entries(settings).map(([key, value]) => {
+            const displayName = settingNames[key] || key
+            let displayValue = value
+            
+            // Format boolean values
+            if (typeof value === 'boolean') {
+                displayValue = value ? 'ON' : 'OFF'
+            }
+            
+            return `${displayName}: ${displayValue}`
+        }).join(', ')
+
+        // Create the log message
+        const logMessage = {
+            id: Date.now() + Math.random(), // Unique ID
+            type: 'SETTINGS_CHANGE',
+            author: null, // No specific author for system messages
+            content: `${username} changed settings: ${changes}`,
+            timestamp: Date.now() / 1000,
+            time: unix2time(Date.now() / 1000),
+            isSettingsLog: true // Flag to style it differently if needed
+        }
+
+        // Add to console messages
+        this.appendMessage(logMessage)
+
+        // Also log to browser console for debugging
+        console.log(`[SETTINGS CHANGE] ${username} changed:`, settings)
+    }
+
 	onConsoleMessage(ev) {
 		let msg = JSON.parse(ev.data)
 
@@ -253,7 +310,15 @@ class ConsoleBase extends React.Component {
 			return;
 		}
 
+		// NEW: Enhanced settings_applied handler with logging
 		if(msg.action === 'settings_applied') {
+			// Extract settings and username from the message
+			const settings = msg.settings || {}
+			const username = msg.username || msg.user || 'Unknown User'
+			
+			// Log the settings change to console
+			this.logSettingsChange(settings, username)
+			
 			// Broadcast current settings to all connected viewers
 			// This will update the UI for everyone when someone changes settings
 			return
@@ -367,64 +432,20 @@ class ConsoleBase extends React.Component {
         }))
     }
 
-// In Console.js, modify the submitMessage method to handle ingame commands
+    submitMessage(e, inputEl) {
+        let me = this.props.twitchUser.name
+        let msg = inputEl ? inputEl.value.trim() : this.inputEl.current.value.trim()
+        let date = new Date()
 
-// In Console.js, modify the submitMessage method to handle ingame commands
+        if(this.state.status_message !== null) {
+            return false
+        }
 
-submitMessage(e, inputEl) {
-    let me = this.props.twitchUser.name
-    let msg = inputEl ? inputEl.value.trim() : this.inputEl.current.value.trim()
-    let date = new Date()
-
-    if(this.state.status_message !== null) {
-        return false
-    }
-
-    if(msg === '') {
-        this.setState({
-            status_message: {
-                'type': 'warning',
-                'message': 'Your message cannot be blank',
-            }
-        }, () => {
-            setTimeout(() => {
-                this.setState({status_message: null})
-            }, 2000);
-        })
-        return false
-    }
-
-    if(/[^A-Za-z0-9\|!@#$\^&*\(\)_\-=\+\[\]{}\<\>\.,\?'": ]+/.test(msg)) {
-        this.setState({
-            status_message: {
-                'type': 'warning',
-                'message': 'Please use only alphanumeric characters',
-            }
-        }, () => {
-            setTimeout(() => {
-                this.setState({status_message: null})
-            }, 2000);
-        })
-        return false
-    }
-
-    let new_msg = {
-        'action': 'message',
-        'origin': 'twitch',
-        'message': {
-            'author': me,
-            'content': msg,
-        },
-    }
-
-    // Handle ingame commands (starting with !)
-    if(msg.startsWith('!')) {
-        // Check for semicolon (always blocked)
-        if(msg.includes(';')) {
+        if(msg === '') {
             this.setState({
                 status_message: {
                     'type': 'warning',
-                    'message': 'Semicolons are not allowed in commands',
+                    'message': 'Your message cannot be blank',
                 }
             }, () => {
                 setTimeout(() => {
@@ -433,14 +454,12 @@ submitMessage(e, inputEl) {
             })
             return false
         }
-        
-        // Check for "show" as a separate word
-        const words = msg.toLowerCase().split(' ');
-        if(words.includes('show')) {
+
+        if(/[^A-Za-z0-9\|!@#$\^&*\(\)_\-=\+\[\]{}\<\>\.,\?'": ]+/.test(msg)) {
             this.setState({
                 status_message: {
                     'type': 'warning',
-                    'message': 'Commands with "show" are not allowed',
+                    'message': 'Please use only alphanumeric characters',
                 }
             }, () => {
                 setTimeout(() => {
@@ -449,50 +468,92 @@ submitMessage(e, inputEl) {
             })
             return false
         }
-        
-        // Only allow !top commands (with or without parameters)
-        if(msg.startsWith('!top')) {
-            // Send the command without username prefix
-            new_msg.message.content = msg;
-            new_msg.message.author = null;
+
+        let new_msg = {
+            'action': 'message',
+            'origin': 'twitch',
+            'message': {
+                'author': me,
+                'content': msg,
+            },
+        }
+
+        // Handle ingame commands (starting with !)
+        if(msg.startsWith('!')) {
+            // Check for semicolon (always blocked)
+            if(msg.includes(';')) {
+                this.setState({
+                    status_message: {
+                        'type': 'warning',
+                        'message': 'Semicolons are not allowed in commands',
+                    }
+                }, () => {
+                    setTimeout(() => {
+                        this.setState({status_message: null})
+                    }, 2000);
+                })
+                return false
+            }
             
-            // Send the command
+            // Check for "show" as a separate word
+            const words = msg.toLowerCase().split(' ');
+            if(words.includes('show')) {
+                this.setState({
+                    status_message: {
+                        'type': 'warning',
+                        'message': 'Commands with "show" are not allowed',
+                    }
+                }, () => {
+                    setTimeout(() => {
+                        this.setState({status_message: null})
+                    }, 2000);
+                })
+                return false
+            }
+            
+            // Only allow !top commands (with or without parameters)
+            if(msg.startsWith('!top')) {
+                // Send the command without username prefix
+                new_msg.message.content = msg;
+                new_msg.message.author = null;
+                
+                // Send the command
+                let ok = this.sendWS(new_msg)
+                if(!ok) {
+                    return false
+                }
+            } else {
+                // Block any other ! commands
+                this.setState({
+                    status_message: {
+                        'type': 'warning',
+                        'message': 'Only !top commands are allowed',
+                    }
+                }, () => {
+                    setTimeout(() => {
+                        this.setState({status_message: null})
+                    }, 2000);
+                })
+                return false
+            }
+
+        } else {
+            // Handle regular chat messages
+            // Regular messages get sent with the author name as usual
             let ok = this.sendWS(new_msg)
             if(!ok) {
                 return false
             }
-        } else {
-            // Block any other ! commands
-            this.setState({
-                status_message: {
-                    'type': 'warning',
-                    'message': 'Only !top commands are allowed',
-                }
-            }, () => {
-                setTimeout(() => {
-                    this.setState({status_message: null})
-                }, 2000);
-            })
-            return false
         }
 
-    } else {
-        // Handle regular chat messages
-        // Regular messages get sent with the author name as usual
-        let ok = this.sendWS(new_msg)
-        if(!ok) {
-            return false
+        if (inputEl) inputEl.value = ''
+        else this.inputEl.current.value = ''
+        if (this.scrollerEl.current && !this.state.scrolledUp) {
+            this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight
         }
-    }
 
-    if (inputEl) inputEl.value = ''
-    else this.inputEl.current.value = ''
-    if (this.scrollerEl.current && !this.state.scrolledUp) {
-        this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight
+        return true
     }
-
-    return true
-}
 
     sendCommand(cmd) {
         let me = this.props.twitchUser.name
@@ -518,7 +579,7 @@ submitMessage(e, inputEl) {
 			return false
 		}
 
-		return true  // ADD THIS LINE HERE
+		return true
 	}
 
 	sendWS(msg) {
@@ -628,7 +689,7 @@ render() {
 							<input type="text" className="input" ref={this.inputEl} title="Type your message here" />
 						</div>
 						
-						{/* New font size controls between input and send button */}
+						{/* Font size controls between input and send button */}
 						<div className="font-size-controls-input">
 							{this.state.fontSize !== 'small' && (
 								<button 

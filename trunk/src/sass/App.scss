@@ -3468,3 +3468,56 @@ body {
         }
     }
 }
+
+// -----------------------------------------------------------------
+// - Settings Change Messages
+// -----------------------------------------------------------------
+
+.row.-settings-change {
+    background: rgba(145, 71, 255, 0.1);
+    border-left: 3px solid #9147FF;
+    
+    .settings-change-message {
+        .settings-icon {
+            margin-right: 8px;
+            font-size: 1.1em;
+        }
+        
+        color: #9147FF;
+        font-weight: 500;
+        font-style: italic;
+        
+        // Highlight the username in the message
+        // This will color the first word (username) differently
+        .qcolor7:first-child {
+            font-weight: 600;
+            color: #B47FFF;
+        }
+    }
+}
+
+.theme-light .row.-settings-change {
+    background: rgba(113, 55, 199, 0.15);
+    border-left-color: #7137c7;
+    
+    .settings-change-message {
+        color: #7137c7;
+        
+        .qcolor7:first-child {
+            color: #5527a0;
+        }
+    }
+}
+
+.theme-dark .row.-settings-change {
+    background: rgba(145, 71, 255, 0.1);
+    border-left-color: #a96fff;
+    
+    .settings-change-message {
+        color: #a96fff;
+        
+        .qcolor7:first-child {
+            color: #C49FFF;
+        }
+    }
+}
