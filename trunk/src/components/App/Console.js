@@ -310,11 +310,13 @@ class ConsoleBase extends React.Component {
 			return;
 		}
 
-		// NEW: Enhanced settings_applied handler with logging
+		// Enhanced settings_applied handler with logging
 		if(msg.action === 'settings_applied') {
 			// Extract settings and username from the message
 			const settings = msg.settings || {}
-			const username = msg.username || msg.user || 'Unknown User'
+			// TRY MULTIPLE SOURCES FOR USERNAME:
+			const username = msg.username || msg.user || msg.user_name || 
+							this.props.twitchUser.name || 'Unknown User'
 			
 			// Log the settings change to console
 			this.logSettingsChange(settings, username)

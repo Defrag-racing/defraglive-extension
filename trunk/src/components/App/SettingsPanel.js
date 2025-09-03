@@ -119,23 +119,26 @@ class SettingsPanelBase extends React.Component {
         const settingsCommand = {
             action: 'settings_batch',
             settings: settings,
-            timestamp: Date.now()
-        }
-        
-        this.props.sendCommand(settingsCommand)
-        
-        if (isVidRestart) {
-            this.setState(prevState => ({
-                currentSettings: {
-                    ...prevState.currentSettings,
-                    ...settings
-                },
-                vidRestartCooldown: Date.now() + 300000, // 5 minutes
-                showConfirmDialog: false,
-                confirmSettings: null
-            }))
-        }
-    }
+            timestamp: Date.now(),
+			username: this.props.twitchUser.name,
+			user_id: this.props.twitchUser.id,
+			opaque_id: this.props.twitchUser.opaque_id
+		}
+		
+		this.props.sendCommand(settingsCommand)
+		
+		if (isVidRestart) {
+			this.setState(prevState => ({
+				currentSettings: {
+					...prevState.currentSettings,
+					...settings
+				},
+				vidRestartCooldown: Date.now() + 300000, // 5 minutes
+				showConfirmDialog: false,
+				confirmSettings: null
+			}))
+		}
+	}
     
     resetVidRestartToDefaults() {
         const defaultVidSettings = {}
