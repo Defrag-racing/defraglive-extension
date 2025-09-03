@@ -38,14 +38,17 @@ class SettingsPanelBase extends React.Component {
     constructor(props) {
         super(props)
         
-        this.state = {
-            currentSettings: { ...SETTING_DEFAULTS },
-            pendingVidRestartSettings: { ...SETTING_DEFAULTS }, // Only for vid_restart settings
-            cooldowns: {},
-            vidRestartCooldown: 0,
-            showConfirmDialog: false,
-            confirmSettings: null
-        }
+		this.state = {
+			currentSettings: { ...SETTING_DEFAULTS },
+			pendingVidRestartSettings: { ...SETTING_DEFAULTS }, // Only for vid_restart settings
+			cooldowns: {},
+			vidRestartCooldown: 0,
+			showConfirmDialog: false,
+			confirmSettings: null,
+			showEmergencyDialog: false,
+			vidRestartLocked: true, // Lock video settings behind emergency dialog
+			hoveredTooltip: null // For custom tooltips
+		}
         
         this.applyVidRestartSettings = this.applyVidRestartSettings.bind(this)
         this.resetVidRestartToDefaults = this.resetVidRestartToDefaults.bind(this)
@@ -57,16 +60,57 @@ class SettingsPanelBase extends React.Component {
         this.isOnCooldown = this.isOnCooldown.bind(this)
         this.getCooldownRemaining = this.getCooldownRemaining.bind(this)
         this.getVidRestartCooldownRemaining = this.getVidRestartCooldownRemaining.bind(this)
+        this.handleEmergencyConfirm = this.handleEmergencyConfirm.bind(this)
+        this.handleEmergencyCancel = this.handleEmergencyCancel.bind(this)
+        this.showTooltip = this.showTooltip.bind(this)
+        this.hideTooltip = this.hideTooltip.bind(this)
     }
     
-    updateVidRestartSetting(key, value) {
-        this.setState(prevState => ({
-            pendingVidRestartSettings: {
-                ...prevState.pendingVidRestartSettings,
-                [key]: value
+    showTooltip(text, event) {
+        this.setState({
+            hoveredTooltip: {
+                text: text,
+                x: event.clientX,
+                y: event.clientY
             }
-        }))
+        })
     }
+    
+    hideTooltip() {
+        this.setState({ hoveredTooltip: null })
+    }
+    
+	updateVidRestartSetting(key, value) {
+		console.log('updateVidRestartSetting called:', key, value, 'locked:', this.state.vidRestartLocked)
+		
+		// Check if emergency dialog needs to be shown
+		if (this.state.vidRestartLocked) {
+			console.log('Showing emergency dialog')
+			this.setState({ showEmergencyDialog: true })
+			return
+		}
+		
+		console.log('Updating video restart setting:', key, value)
+		this.setState(prevState => ({
+			pendingVidRestartSettings: {
+				...prevState.pendingVidRestartSettings,
+				[key]: value
+			}
+		}))
+	}
+
+	handleEmergencyConfirm() {
+		console.log('Emergency confirmed - unlocking video restart settings')
+		this.setState({ 
+			showEmergencyDialog: false,
+			vidRestartLocked: false
+		})
+	}
+
+	handleEmergencyCancel() {
+		console.log('Emergency cancelled')
+		this.setState({ showEmergencyDialog: false })
+	}
     
     updateInstantSetting(key, value) {
         const now = Date.now()
@@ -141,6 +185,11 @@ class SettingsPanelBase extends React.Component {
 	}
     
     resetVidRestartToDefaults() {
+        if (this.state.vidRestartLocked) {
+            this.setState({ showEmergencyDialog: true })
+            return
+        }
+        
         const defaultVidSettings = {}
         VID_RESTART_SETTINGS.forEach(key => {
             defaultVidSettings[key] = SETTING_DEFAULTS[key]
@@ -249,79 +298,19 @@ class SettingsPanelBase extends React.Component {
                                 {svgClose}
                             </div>
                         </div>
-                        
-                        {/* Video Restart Settings Section - AT TOP */}
-                        <div className="settings-section">
-                            <div className="section-title">Video Settings (Requires Restart - 5min cooldown)</div>
-                            
-                            {/* Apply and Reset buttons FIRST */}
-                            <div className="settings-actions" style={{ marginBottom: '15px' }}>
-                                <button 
-                                    className={`btn btn-primary ${vidRestartCooldown > 0 || !hasVidRestartChanges ? 'disabled' : ''}`}
-                                    onClick={this.applyVidRestartSettings}
-                                    disabled={vidRestartCooldown > 0 || !hasVidRestartChanges}
-                                    style={{ marginRight: '10px' }}
-                                >
-                                    {vidRestartCooldown > 0 ? `Apply (${vidRestartCooldown}s)` : hasVidRestartChanges ? 'Apply Changes' : 'No Changes'}
-                                </button>
-                                <button 
-                                    className="btn btn-secondary" 
-                                    onClick={this.resetVidRestartToDefaults}
-                                >
-                                    Reset to Defaults
-                                </button>
-                            </div>
-                            
-                            <div className="settings-grid">
-                                <div className="setting-item">
-                                    <div className="setting-label">Brightness (1-5)</div>
-                                    <div className="setting-control">
-                                        <input 
-                                            type="range" 
-                                            min="1" 
-                                            max="5" 
-                                            value={this.state.pendingVidRestartSettings.brightness}
-                                            onChange={(e) => this.updateVidRestartSetting('brightness', parseInt(e.target.value))}
-                                            className="range-input"
-                                        />
-                                        <span>{this.state.pendingVidRestartSettings.brightness}</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="setting-item">
-                                    <div className="setting-label">Texture Quality (0-6)</div>
-                                    <div className="setting-control">
-                                        <input 
-                                            type="range" 
-                                            min="0" 
-                                            max="6" 
-                                            value={this.state.pendingVidRestartSettings.picmip}
-                                            onChange={(e) => this.updateVidRestartSetting('picmip', parseInt(e.target.value))}
-                                            className="range-input"
-                                        />
-                                        <span>{this.state.pendingVidRestartSettings.picmip}</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="setting-item">
-                                    <div className="setting-label">Fullbright</div>
-                                    <div className="setting-control">
-                                        <div 
-                                            className={`toggle-switch ${this.state.pendingVidRestartSettings.fullbright ? 'active' : ''}`}
-                                            onClick={() => this.updateVidRestartSetting('fullbright', !this.state.pendingVidRestartSettings.fullbright)}
-                                        >
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         {/* Visual Settings - Instant Apply */}
                         <div className="settings-section">
                             <div className="section-title">Visual Settings (Instant - 15s cooldown)</div>
                             <div className="settings-grid">
 								<div className="setting-item gamma-buttons">
-									<div className="setting-label">Gamma</div>
+									<div 
+                                        className="setting-label" 
+                                        onMouseEnter={(e) => this.showTooltip("Adjusts overall screen brightness and contrast. Higher values make dark areas brighter without affecting bright areas as much.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+                                        Gamma Correction
+                                    </div>
 									<div className="setting-control">
 										<div className="gamma-button-group">
 											{[1.0, 1.1, 1.2, 1.3, 1.4, 1.5].map(value => (
@@ -330,6 +319,8 @@ class SettingsPanelBase extends React.Component {
 													className={`gamma-btn ${this.state.currentSettings.gamma === value ? 'active' : ''} ${this.isOnCooldown('gamma') ? 'disabled' : ''}`}
 													onClick={() => !this.isOnCooldown('gamma') && this.updateInstantSetting('gamma', value)}
 													disabled={this.isOnCooldown('gamma')}
+													onMouseEnter={(e) => this.showTooltip("Adjusts overall screen brightness and contrast. Higher values make dark areas brighter without affecting bright areas as much.", e)}
+													onMouseLeave={this.hideTooltip}
 												>
 													{value}
 												</button>
@@ -343,29 +334,105 @@ class SettingsPanelBase extends React.Component {
 									</div>
 								</div>
                                 
-                                {['sky', 'triggers', 'clips', 'slick'].map(key => (
-                                    <div className="setting-item" key={key}>
-                                        <div className="setting-label">
-                                            {key === 'sky' && 'Sky Rendering'}
-                                            {key === 'triggers' && 'Show Triggers'}
-                                            {key === 'clips' && 'Show Clips'}
-                                            {key === 'slick' && 'Highlight Slick Surfaces'}
-                                        </div>
-                                        <div className="setting-control">
-                                            <div 
-                                                className={`toggle-switch ${this.state.currentSettings[key] ? 'active' : ''} ${this.isOnCooldown(key) ? 'disabled' : ''}`}
-                                                onClick={() => !this.isOnCooldown(key) && this.updateInstantSetting(key, !this.state.currentSettings[key])}
-                                                style={{ opacity: this.isOnCooldown(key) ? 0.5 : 1 }}
-                                            >
-                                            </div>
-                                            {this.isOnCooldown(key) && (
-                                                <span style={{ marginLeft: '8px', fontSize: '0.8em', opacity: 0.7 }}>
-                                                    {this.getCooldownRemaining(key)}s
-                                                </span>
-                                            )}
-                                        </div>
+                                <div className="setting-item">
+                                    <div 
+                                        className="setting-label"
+                                        onMouseEnter={(e) => this.showTooltip("Toggles sky rendering on/off. Disabling can improve performance and reduce visual distractions during runs.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+                                        Show Sky
                                     </div>
-                                ))}
+                                    <div className="setting-control">
+                                        <div 
+                                            className={`toggle-switch ${this.state.currentSettings.sky ? 'active' : ''} ${this.isOnCooldown('sky') ? 'disabled' : ''}`}
+                                            onClick={() => !this.isOnCooldown('sky') && this.updateInstantSetting('sky', !this.state.currentSettings.sky)}
+                                            style={{ opacity: this.isOnCooldown('sky') ? 0.5 : 1 }}
+                                            onMouseEnter={(e) => this.showTooltip("Toggles sky rendering on/off. Disabling can improve performance and reduce visual distractions during runs.", e)}
+                                            onMouseLeave={this.hideTooltip}
+                                        >
+                                        </div>
+                                        {this.isOnCooldown('sky') && (
+                                            <span style={{ marginLeft: '8px', fontSize: '0.8em', opacity: 0.7 }}>
+                                                {this.getCooldownRemaining('sky')}s
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="setting-item">
+                                    <div 
+                                        className="setting-label"
+                                        onMouseEnter={(e) => this.showTooltip("Makes invisible trigger zones visible as colored outlines. Useful for learning map mechanics and jump triggers.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+                                        Show Trigger Brushes
+                                    </div>
+                                    <div className="setting-control">
+                                        <div 
+                                            className={`toggle-switch ${this.state.currentSettings.triggers ? 'active' : ''} ${this.isOnCooldown('triggers') ? 'disabled' : ''}`}
+                                            onClick={() => !this.isOnCooldown('triggers') && this.updateInstantSetting('triggers', !this.state.currentSettings.triggers)}
+                                            style={{ opacity: this.isOnCooldown('triggers') ? 0.5 : 1 }}
+                                            onMouseEnter={(e) => this.showTooltip("Makes invisible trigger zones visible as colored outlines. Useful for learning map mechanics and jump triggers.", e)}
+                                            onMouseLeave={this.hideTooltip}
+                                        >
+                                        </div>
+                                        {this.isOnCooldown('triggers') && (
+                                            <span style={{ marginLeft: '8px', fontSize: '0.8em', opacity: 0.7 }}>
+                                                {this.getCooldownRemaining('triggers')}s
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="setting-item">
+                                    <div 
+                                        className="setting-label"
+                                        onMouseEnter={(e) => this.showTooltip("Shows invisible collision boundaries that block player movement. Helps understand map geometry and collision.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+                                        Show Clip Brushes
+                                    </div>
+                                    <div className="setting-control">
+                                        <div 
+                                            className={`toggle-switch ${this.state.currentSettings.clips ? 'active' : ''} ${this.isOnCooldown('clips') ? 'disabled' : ''}`}
+                                            onClick={() => !this.isOnCooldown('clips') && this.updateInstantSetting('clips', !this.state.currentSettings.clips)}
+                                            style={{ opacity: this.isOnCooldown('clips') ? 0.5 : 1 }}
+                                            onMouseEnter={(e) => this.showTooltip("Shows invisible collision boundaries that block player movement. Helps understand map geometry and collision.", e)}
+                                            onMouseLeave={this.hideTooltip}
+                                        >
+                                        </div>
+                                        {this.isOnCooldown('clips') && (
+                                            <span style={{ marginLeft: '8px', fontSize: '0.8em', opacity: 0.7 }}>
+                                                {this.getCooldownRemaining('clips')}s
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="setting-item">
+                                    <div 
+                                        className="setting-label"
+                                        onMouseEnter={(e) => this.showTooltip("Highlights surfaces with special friction properties (ice-like or slippery areas) for better visibility.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+                                        Highlight Slick Surfaces
+                                    </div>
+                                    <div className="setting-control">
+                                        <div 
+                                            className={`toggle-switch ${this.state.currentSettings.slick ? 'active' : ''} ${this.isOnCooldown('slick') ? 'disabled' : ''}`}
+                                            onClick={() => !this.isOnCooldown('slick') && this.updateInstantSetting('slick', !this.state.currentSettings.slick)}
+                                            style={{ opacity: this.isOnCooldown('slick') ? 0.5 : 1 }}
+                                            onMouseEnter={(e) => this.showTooltip("Highlights surfaces with special friction properties (ice-like or slippery areas) for better visibility.", e)}
+                                            onMouseLeave={this.hideTooltip}
+                                        >
+                                        </div>
+                                        {this.isOnCooldown('slick') && (
+                                            <span style={{ marginLeft: '8px', fontSize: '0.8em', opacity: 0.7 }}>
+                                                {this.getCooldownRemaining('slick')}s
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -374,23 +441,31 @@ class SettingsPanelBase extends React.Component {
                             <div className="section-title">HUD & Interface (Instant - 15s cooldown)</div>
                             <div className="settings-grid">
                                 {[
-                                    { key: 'drawgun', label: 'Draw Gun' },
-                                    { key: 'angles', label: 'Weapon Angles' },
-                                    { key: 'lagometer', label: 'Lagometer' },
-                                    { key: 'snaps', label: 'Snaps HUD' },
-                                    { key: 'cgaz', label: 'CGaz HUD' },
-                                    { key: 'speedinfo', label: 'Speed Info (CHS)' },
-                                    { key: 'speedorig', label: 'Speed HUD Element' },
-                                    { key: 'inputs', label: 'WASD Inputs' },
-                                    { key: 'obs', label: 'OverBounces Indicator' }
-                                ].map(({ key, label }) => (
+                                    { key: 'drawgun', label: 'Weapon Movement', tooltip: 'Controls weapon bobbing/swaying animation. When disabled, weapon stays stationary for steadier aim and cleaner view.' },
+                                    { key: 'angles', label: 'Weapon Angle Display', tooltip: 'Shows current weapon angles/pitch information on screen. Useful for advanced movement techniques.' },
+                                    { key: 'lagometer', label: 'Connection Meter', tooltip: 'Displays network performance graph showing lag spikes and connection quality.' },
+                                    { key: 'snaps', label: 'Snaps Strafe HUD', tooltip: 'Shows strafe synchronization and timing information. Helps analyze and improve strafe jumping technique.' },
+                                    { key: 'cgaz', label: 'CGaz Strafe HUD', tooltip: 'Displays optimal strafe angles and acceleration zones. Essential tool for improving movement efficiency.' },
+                                    { key: 'speedinfo', label: 'Speedometer via Info (CHS)', tooltip: 'Shows current speed, max speed, and other movement statistics using the CHS info system.' },
+                                    { key: 'speedorig', label: 'Original Speedometer via HUD', tooltip: 'Displays speed using the original Defrag HUD element. Alternative to CHS speed info.' },
+                                    { key: 'inputs', label: 'Input Display (WASD)', tooltip: 'Shows currently pressed movement keys (WASD, mouse buttons). Useful for analyzing movement patterns.' },
+                                    { key: 'obs', label: 'OverBounces Indicator', tooltip: 'Displays overbounce detection and count. Helps track advanced movement techniques.' }
+                                ].map(({ key, label, tooltip }) => (
                                     <div className="setting-item" key={key}>
-                                        <div className="setting-label">{label}</div>
+                                        <div 
+                                            className="setting-label"
+                                            onMouseEnter={(e) => this.showTooltip(tooltip, e)}
+                                            onMouseLeave={this.hideTooltip}
+                                        >
+                                            {label}
+                                        </div>
                                         <div className="setting-control">
                                             <div 
                                                 className={`toggle-switch ${this.state.currentSettings[key] ? 'active' : ''} ${this.isOnCooldown(key) ? 'disabled' : ''}`}
                                                 onClick={() => !this.isOnCooldown(key) && this.updateInstantSetting(key, !this.state.currentSettings[key])}
                                                 style={{ opacity: this.isOnCooldown(key) ? 0.5 : 1 }}
+                                                onMouseEnter={(e) => this.showTooltip(tooltip, e)}
+                                                onMouseLeave={this.hideTooltip}
                                             >
                                             </div>
                                             {this.isOnCooldown(key) && (
@@ -409,19 +484,27 @@ class SettingsPanelBase extends React.Component {
                             <div className="section-title">Gameplay (Instant - 15s cooldown)</div>
                             <div className="settings-grid">
                                 {[
-                                    { key: 'nodraw', label: 'Players Visibility' },
-                                    { key: 'thirdperson', label: 'Third Person View' },
-                                    { key: 'miniview', label: 'Miniview Window' },
-                                    { key: 'gibs', label: 'Gibs After Kill' },
-                                    { key: 'blood', label: 'Blood After Kill' }
-                                ].map(({ key, label }) => (
+                                    { key: 'nodraw', label: 'Hide Other Players', tooltip: 'Makes other players invisible to reduce visual distractions during runs. Toggle between visible and hidden.' },
+                                    { key: 'thirdperson', label: 'Third Person View', tooltip: 'Switches between first-person and third-person camera perspective.' },
+                                    { key: 'miniview', label: 'Miniview Window', tooltip: 'Displays a small third-person view of yourself in a corner window. Useful for seeing your character\'s movement from external perspective.' },
+                                    { key: 'gibs', label: 'Gibs After Kill', tooltip: 'Shows gore effects when players are killed. Purely cosmetic setting.' },
+                                    { key: 'blood', label: 'Blood Effects', tooltip: 'Enables blood particle effects when taking damage. Cosmetic setting that doesn\'t affect gameplay.' }
+                                ].map(({ key, label, tooltip }) => (
                                     <div className="setting-item" key={key}>
-                                        <div className="setting-label">{label}</div>
+                                        <div 
+                                            className="setting-label"
+                                            onMouseEnter={(e) => this.showTooltip(tooltip, e)}
+                                            onMouseLeave={this.hideTooltip}
+                                        >
+                                            {label}
+                                        </div>
                                         <div className="setting-control">
                                             <div 
                                                 className={`toggle-switch ${this.state.currentSettings[key] ? 'active' : ''} ${this.isOnCooldown(key) ? 'disabled' : ''}`}
                                                 onClick={() => !this.isOnCooldown(key) && this.updateInstantSetting(key, !this.state.currentSettings[key])}
                                                 style={{ opacity: this.isOnCooldown(key) ? 0.5 : 1 }}
+                                                onMouseEnter={(e) => this.showTooltip(tooltip, e)}
+                                                onMouseLeave={this.hideTooltip}
                                             >
                                             </div>
                                             {this.isOnCooldown(key) && (
@@ -435,6 +518,200 @@ class SettingsPanelBase extends React.Component {
                             </div>
                         </div>
 
+						{/* Emergency Video Settings Section - AT BOTTOM */}
+						<div 
+							className={`settings-section vid-restart-section ${this.state.vidRestartLocked ? 'locked-section' : ''}`}
+							style={{ 
+								cursor: this.state.vidRestartLocked ? 'pointer' : 'default',
+								position: 'relative'
+							}}
+						>
+							{this.state.vidRestartLocked && (
+								<div 
+									className="emergency-unlock-overlay"
+									onClick={() => this.setState({ showEmergencyDialog: true })}
+									style={{
+										position: 'absolute',
+										top: 0,
+										left: 0,
+										right: 0,
+										bottom: 0,
+										zIndex: 5,
+										backgroundColor: 'rgba(255, 152, 0, 0.05)',
+										cursor: 'pointer'
+									}}
+								/>
+							)}
+							<div className="section-title">Emergency Video Settings (Requires Restart - 5min cooldown)</div>
+							
+							<div style={{ 
+								background: 'rgba(255, 193, 7, 0.1)', 
+								border: '1px solid #ff9800',
+								borderRadius: '5px',
+								padding: '10px',
+								marginBottom: '15px',
+								fontSize: '0.85rem',
+								lineHeight: '1.4'
+							}}>
+								<strong>WARNING:</strong> These settings require video restart and should only be used as emergency measures when maps have unwatchable textures or extreme lighting that gamma correction cannot fix.
+								
+								{this.state.vidRestartLocked && (
+									<div style={{ marginTop: '10px', color: '#ff6b6b', fontWeight: 'bold' }}>
+										🔒 LOCKED: Click anywhere in this section to unlock emergency mode
+									</div>
+								)}
+								
+								{!this.state.vidRestartLocked && (
+									<div style={{ marginTop: '10px', color: '#4CAF50', fontWeight: 'bold' }}>
+										✅ UNLOCKED: Emergency mode active - you can now modify these settings
+									</div>
+								)}
+							</div>
+							
+							{/* Apply and Reset buttons */}
+							<div className="settings-actions" style={{ marginBottom: '15px' }}>
+								<button 
+									className={`btn btn-primary ${vidRestartCooldown > 0 || !hasVidRestartChanges || this.state.vidRestartLocked ? 'disabled' : ''}`}
+									onClick={this.applyVidRestartSettings}
+									disabled={vidRestartCooldown > 0 || !hasVidRestartChanges || this.state.vidRestartLocked}
+									style={{ marginRight: '10px' }}
+								>
+									{vidRestartCooldown > 0 ? `Apply (${vidRestartCooldown}s)` : hasVidRestartChanges ? 'Apply Changes' : 'No Changes'}
+								</button>
+								<button 
+									className={`btn btn-secondary ${this.state.vidRestartLocked ? 'disabled' : ''}`}
+									onClick={this.resetVidRestartToDefaults}
+									disabled={this.state.vidRestartLocked}
+								>
+									Reset to Defaults
+								</button>
+							</div>
+							
+							<div className="settings-grid">
+								<div className="setting-item">
+									<div 
+                                        className="setting-label"
+                                        onMouseEnter={(e) => this.showTooltip("Controls how bright the map lighting appears. Higher values make dark areas more visible but may wash out colors.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+										Map Brightness (1-5)
+									</div>
+									<div className="setting-control">
+										<input 
+											type="range" 
+											min="1" 
+											max="5" 
+											value={this.state.pendingVidRestartSettings.brightness}
+											onChange={(e) => this.updateVidRestartSetting('brightness', parseInt(e.target.value))}
+											className={`range-input ${this.state.vidRestartLocked ? 'disabled' : ''}`}
+											disabled={this.state.vidRestartLocked}
+											onMouseEnter={(e) => this.showTooltip("Controls how bright the map lighting appears. Higher values make dark areas more visible but may wash out colors.", e)}
+											onMouseLeave={this.hideTooltip}
+										/>
+										<span>{this.state.pendingVidRestartSettings.brightness}</span>
+									</div>
+								</div>
+								
+								<div className="setting-item">
+									<div 
+                                        className="setting-label"
+                                        onMouseEnter={(e) => this.showTooltip("Controls texture resolution quality. 0 = highest detail, 6 = lowest detail. Lower values improve visual quality but use more memory.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+										Texture Detail (0-6)
+									</div>
+									<div className="setting-control">
+										<input 
+											type="range" 
+											min="0" 
+											max="6" 
+											value={this.state.pendingVidRestartSettings.picmip}
+											onChange={(e) => this.updateVidRestartSetting('picmip', parseInt(e.target.value))}
+											className={`range-input ${this.state.vidRestartLocked ? 'disabled' : ''}`}
+											disabled={this.state.vidRestartLocked}
+											onMouseEnter={(e) => this.showTooltip("Controls texture resolution quality. 0 = highest detail, 6 = lowest detail. Lower values improve visual quality but use more memory.", e)}
+											onMouseLeave={this.hideTooltip}
+										/>
+										<span>{this.state.pendingVidRestartSettings.picmip}</span>
+									</div>
+								</div>
+								
+								<div className="setting-item">
+									<div 
+                                        className="setting-label"
+                                        onMouseEnter={(e) => this.showTooltip("Removes all shadows and lighting effects, making everything evenly lit. Useful for competitive play but removes visual atmosphere.", e)}
+                                        onMouseLeave={this.hideTooltip}
+                                    >
+										Fullbright Mode
+									</div>
+									<div className="setting-control">
+										<div 
+											className={`toggle-switch ${this.state.pendingVidRestartSettings.fullbright ? 'active' : ''} ${this.state.vidRestartLocked ? 'disabled' : ''}`}
+											onClick={() => this.updateVidRestartSetting('fullbright', !this.state.pendingVidRestartSettings.fullbright)}
+											onMouseEnter={(e) => this.showTooltip("Removes all shadows and lighting effects, making everything evenly lit. Useful for competitive play but removes visual atmosphere.", e)}
+											onMouseLeave={this.hideTooltip}
+										>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Custom Tooltip */}
+						{this.state.hoveredTooltip && (
+							<div 
+								className="custom-tooltip"
+								style={{
+									position: 'fixed',
+									left: this.state.hoveredTooltip.x + 10,
+									top: this.state.hoveredTooltip.y + 10,
+									background: 'rgba(0, 0, 0, 0.9)',
+									color: 'white',
+									padding: '8px 12px',
+									borderRadius: '4px',
+									fontSize: '0.8rem',
+									maxWidth: '200px',
+									wordWrap: 'break-word',
+									zIndex: 10000,
+									pointerEvents: 'none',
+									boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+								}}
+							>
+								{this.state.hoveredTooltip.text}
+							</div>
+						)}
+
+						{/* Emergency Dialog */}
+						{this.state.showEmergencyDialog && (
+							<div className="confirmation-overlay">
+								<div className="confirmation-dialog">
+									<h3>🚨 Emergency Video Settings Warning</h3>
+									<p><strong>THIS FEATURE IS ONLY FOR EMERGENCY USE</strong></p>
+									<p>These settings should only be modified when:</p>
+									<ul>
+										<li>Map has textures that make the stream unwatchable</li>
+										<li>Map is too dark or bright and gamma correction cannot help</li>
+										<li>Extreme visual issues that affect viewer experience</li>
+									</ul>
+									<p><strong>Do you want to proceed with modifying these emergency settings?</strong></p>
+									<div className="confirmation-buttons">
+										<button 
+											className="btn btn-primary" 
+											onClick={this.handleEmergencyConfirm}
+										>
+											Yes, Continue
+										</button>
+										<button 
+											className="btn btn-secondary" 
+											onClick={this.handleEmergencyCancel}
+										>
+											No, Cancel
+										</button>
+									</div>
+								</div>
+							</div>
+						)}
+
                         {/* Confirmation Dialog */}
                         {this.state.showConfirmDialog && (
                             <div className="confirmation-overlay">
@@ -444,9 +721,9 @@ class SettingsPanelBase extends React.Component {
                                     <ul>
                                         {Object.keys(this.state.confirmSettings).map(key => (
                                             <li key={key}>
-                                                {key === 'brightness' && `Brightness: ${this.state.confirmSettings[key]}`}
-                                                {key === 'picmip' && `Texture Quality: ${this.state.confirmSettings[key]}`}
-                                                {key === 'fullbright' && `Fullbright: ${this.state.confirmSettings[key] ? 'On' : 'Off'}`}
+                                                {key === 'brightness' && `Map Brightness: ${this.state.confirmSettings[key]}`}
+                                                {key === 'picmip' && `Texture Detail: ${this.state.confirmSettings[key]}`}
+                                                {key === 'fullbright' && `Fullbright Mode: ${this.state.confirmSettings[key] ? 'On' : 'Off'}`}
                                             </li>
                                         ))}
                                     </ul>
