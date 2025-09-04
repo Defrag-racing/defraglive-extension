@@ -19,6 +19,7 @@ export default class App extends React.Component {
             isVisible: true,
             theme: 'light',
             arePlayerControlsVisible: false,
+            isFullscreen: false, // NEW: Track fullscreen state
 
             twitchUser: {
                 'id': null,
@@ -31,6 +32,7 @@ export default class App extends React.Component {
         }
 
         this.getTwitchUser = this.getTwitchUser.bind(this)
+        this.handleFullscreenChange = this.handleFullscreenChange.bind(this) // NEW
     }
 
     contextUpdate(context, delta) {
@@ -49,6 +51,30 @@ export default class App extends React.Component {
         this.setState(() => {
             return { isVisible }
         })
+    }
+
+    // NEW: Fullscreen change handler
+    handleFullscreenChange() {
+        const isFullscreen = !!(
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement
+        )
+        
+        this.setState({ isFullscreen })
+        
+        // Add/remove fullscreen class to body or app wrapper
+        const appWrap = document.querySelector('.app-wrap')
+        if (appWrap) {
+            if (isFullscreen) {
+                appWrap.classList.add('fullscreen-mode')
+            } else {
+                appWrap.classList.remove('fullscreen-mode')
+            }
+        }
+        
+        console.log('Fullscreen state changed:', isFullscreen)
     }
 
     // auth obj = {channelId, clientId, token, userId}
@@ -103,6 +129,12 @@ export default class App extends React.Component {
     // ------
 
     componentDidMount(){
+        // NEW: Add fullscreen event listeners
+        document.addEventListener('fullscreenchange', this.handleFullscreenChange)
+        document.addEventListener('webkitfullscreenchange', this.handleFullscreenChange)
+        document.addEventListener('mozfullscreenchange', this.handleFullscreenChange)
+        document.addEventListener('MSFullscreenChange', this.handleFullscreenChange)
+
         if(this.twitch){
             this.twitch.onAuthorized((auth) => {
                 this.Authentication.setToken(auth.token, auth.userId)
@@ -130,10 +162,18 @@ export default class App extends React.Component {
         }
     }
 
+    // NEW: Clean up fullscreen event listeners
+    componentWillUnmount() {
+        document.removeEventListener('fullscreenchange', this.handleFullscreenChange)
+        document.removeEventListener('webkitfullscreenchange', this.handleFullscreenChange)
+        document.removeEventListener('mozfullscreenchange', this.handleFullscreenChange)
+        document.removeEventListener('MSFullscreenChange', this.handleFullscreenChange)
+    }
+
 render(){
     if(this.state.finishedLoading && this.state.isVisible) {
         return (
-            <div className={`app-wrap isMobile-${this.props.isMobile} theme-${this.state.theme} console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'} notify-${this.props.appstate.isNotifyOpen ? 'opened' : 'closed'} playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'} serverbrowser-${this.props.appstate.isServerBrowserOpen ? 'opened' : 'closed'} settingspanel-${this.props.appstate.isSettingsPanelOpen ? 'opened' : 'closed'} controls-${this.state.arePlayerControlsVisible ? 'visible' : 'hidden'}`}>
+            <div className={`app-wrap isMobile-${this.props.isMobile} theme-${this.state.theme} console-${this.props.appstate.isConsoleOpen ? 'opened' : 'closed'} notify-${this.props.appstate.isNotifyOpen ? 'opened' : 'closed'} playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'} serverbrowser-${this.props.appstate.isServerBrowserOpen ? 'opened' : 'closed'} settingspanel-${this.props.appstate.isSettingsPanelOpen ? 'opened' : 'closed'} controls-${this.state.arePlayerControlsVisible ? 'visible' : 'hidden'} ${this.state.isFullscreen ? 'fullscreen-mode' : ''}`}>
                 <Console twitchUser={this.state.twitchUser}/>
 				    <IdleServerBrowserArrow />
             </div>

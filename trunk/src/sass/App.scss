@@ -3546,3 +3546,119 @@ body {
         }
     }
 }
+
+// -----------------------------------------------------------------
+// - Fullscreen Mode - Hide Controls 
+// -----------------------------------------------------------------
+
+// Hide all controls when in fullscreen mode
+.app-wrap {
+    &.fullscreen-mode,
+    &:-webkit-full-screen,
+    &:-moz-full-screen,
+    &:-ms-fullscreen,
+    &:fullscreen {
+        .console-button,
+        .playerlist-button, 
+        .serverbrowser-button,
+        .settingspanel-button,
+        .notify-input-area,
+        .curr-player-wrap,
+        .idle-server-arrow-container {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateX(-50px) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        // Also hide any open panels
+        .console-wrap,
+        .playerlist-content-wrap,
+        .serverbrowser-content-wrap, 
+        .settingspanel-content-wrap,
+        .notify-lines-wrap {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transform: translateX(-100%) !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        // Show controls on hover with delay
+        &:hover {
+            .console-button,
+            .playerlist-button,
+            .serverbrowser-button, 
+            .settingspanel-button,
+            .notify-input-area,
+            .curr-player-wrap,
+            .idle-server-arrow-container {
+                opacity: 0.7 !important;
+                pointer-events: auto !important;
+                transform: translateX(0) !important;
+                transition: all 0.3s ease 1s !important; // 1 second delay before showing
+            }
+        }
+    }
+}
+
+// Enhanced detection for various fullscreen implementations
+html {
+    &:fullscreen .app-wrap,
+    &:-webkit-full-screen .app-wrap,
+    &:-moz-full-screen .app-wrap,
+    &:-ms-fullscreen .app-wrap {
+        .console-button,
+        .playerlist-button,
+        .serverbrowser-button,
+        .settingspanel-button,
+        .notify-input-area,
+        .curr-player-wrap,
+        .idle-server-arrow-container {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-100px);
+            transition: all 0.3s ease;
+        }
+        
+        // Show on hover with delay
+        &:hover {
+            .console-button,
+            .playerlist-button, 
+            .serverbrowser-button,
+            .settingspanel-button,
+            .notify-input-area,
+            .curr-player-wrap,
+            .idle-server-arrow-container {
+                opacity: 0.8;
+                visibility: visible;
+                transform: translateX(0);
+                transition: all 0.3s ease 1s; // 1 second delay
+            }
+        }
+    }
+}
+
+// Mobile fullscreen adjustments
+.isMobile-true {
+    &.fullscreen-mode,
+    &:-webkit-full-screen,
+    &:-moz-full-screen,
+    &:-ms-fullscreen,
+    &:fullscreen {
+        .console-button,
+        .playerlist-button,
+        .serverbrowser-button,
+        .settingspanel-button {
+            transform: translateX(-30px) !important; // Less movement on mobile
+        }
+        
+        &:hover {
+            .console-button,
+            .playerlist-button,
+            .serverbrowser-button,
+            .settingspanel-button {
+                transition: all 0.3s ease 0.5s !important; // Shorter delay on mobile
+            }
+        }
+    }
+}

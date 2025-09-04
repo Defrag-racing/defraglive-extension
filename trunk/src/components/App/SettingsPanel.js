@@ -47,7 +47,8 @@ class SettingsPanelBase extends React.Component {
 			confirmSettings: null,
 			showEmergencyDialog: false,
 			vidRestartLocked: true, // Lock video settings behind emergency dialog
-			hoveredTooltip: null // For custom tooltips
+			hoveredTooltip: null, // For custom tooltips
+			countdownDisplays: {} // NEW: For real-time countdown display
 		}
         
         this.applyVidRestartSettings = this.applyVidRestartSettings.bind(this)
@@ -64,6 +65,7 @@ class SettingsPanelBase extends React.Component {
         this.handleEmergencyCancel = this.handleEmergencyCancel.bind(this)
         this.showTooltip = this.showTooltip.bind(this)
         this.hideTooltip = this.hideTooltip.bind(this)
+        this.updateCountdownDisplay = this.updateCountdownDisplay.bind(this) // NEW
     }
     
     showTooltip(text, event) {
@@ -78,6 +80,34 @@ class SettingsPanelBase extends React.Component {
     
     hideTooltip() {
         this.setState({ hoveredTooltip: null })
+    }
+    
+    // NEW: Method to update countdown display in real-time
+    updateCountdownDisplay() {
+        const now = Date.now()
+        const newCountdownDisplays = {}
+        let hasChanges = false
+        
+        // Update individual setting countdowns
+        Object.keys(this.state.cooldowns).forEach(key => {
+            const endTime = this.state.cooldowns[key]
+            if (endTime && now < endTime) {
+                const remaining = Math.ceil((endTime - now) / 1000)
+                newCountdownDisplays[key] = remaining
+                hasChanges = true
+            }
+        })
+        
+        // Update vid restart countdown
+        if (this.state.vidRestartCooldown && now < this.state.vidRestartCooldown) {
+            const remaining = Math.ceil((this.state.vidRestartCooldown - now) / 1000)
+            newCountdownDisplays.vidRestart = remaining
+            hasChanges = true
+        }
+        
+        if (hasChanges || Object.keys(this.state.countdownDisplays).length > 0) {
+            this.setState({ countdownDisplays: newCountdownDisplays })
+        }
     }
     
 	updateVidRestartSetting(key, value) {
@@ -122,7 +152,7 @@ class SettingsPanelBase extends React.Component {
         const settings = { [key]: value }
         this.executeSettings(settings, false)
         
-        // Update local state with cooldown
+        // Update local state with cooldown - CHANGED TO 5 SECONDS
         this.setState(prevState => ({
             currentSettings: {
                 ...prevState.currentSettings,
@@ -130,7 +160,7 @@ class SettingsPanelBase extends React.Component {
             },
             cooldowns: {
                 ...prevState.cooldowns,
-                [key]: now + 15000 // 15 second cooldown
+                [key]: now + 5000 // CHANGED: 5 second cooldown instead of 15
             }
         }))
     }
@@ -207,8 +237,11 @@ class SettingsPanelBase extends React.Component {
         window.addEventListener('current-settings', this.handleCurrentSettings)
         this.requestSettingsWhenReady()
         
-        // Cleanup cooldowns
+        // UPDATED: More frequent countdown updates for smoother display
         this.cooldownInterval = setInterval(() => {
+            this.updateCountdownDisplay()
+            
+            // Clean up expired cooldowns
             const now = Date.now()
             const newCooldowns = { ...this.state.cooldowns }
             let changed = false
@@ -227,7 +260,7 @@ class SettingsPanelBase extends React.Component {
             if (this.state.vidRestartCooldown && now >= this.state.vidRestartCooldown) {
                 this.setState({ vidRestartCooldown: 0 })
             }
-        }, 1000)
+        }, 100) // Update every 100ms for smoother countdown display
     }
     
     componentWillUnmount() {
@@ -261,19 +294,13 @@ class SettingsPanelBase extends React.Component {
     }
     
     getCooldownRemaining(key) {
-        const now = Date.now()
-        if (this.state.cooldowns[key] && now < this.state.cooldowns[key]) {
-            return Math.ceil((this.state.cooldowns[key] - now) / 1000)
-        }
-        return 0
+        // Use the real-time countdown display instead of calculating
+        return this.state.countdownDisplays[key] || 0
     }
     
     getVidRestartCooldownRemaining() {
-        const now = Date.now()
-        if (this.state.vidRestartCooldown && now < this.state.vidRestartCooldown) {
-            return Math.ceil((this.state.vidRestartCooldown - now) / 1000)
-        }
-        return 0
+        // Use the real-time countdown display instead of calculating
+        return this.state.countdownDisplays.vidRestart || 0
     }
 
     render() {
@@ -301,7 +328,7 @@ class SettingsPanelBase extends React.Component {
 
                         {/* Visual Settings - Instant Apply */}
                         <div className="settings-section">
-                            <div className="section-title">Visual Settings (Instant - 15s cooldown)</div>
+                            <div className="section-title">Visual Settings (Instant - 5s cooldown)</div>
                             <div className="settings-grid">
 								<div className="setting-item gamma-buttons">
 									<div 
@@ -313,7 +340,7 @@ class SettingsPanelBase extends React.Component {
                                     </div>
 									<div className="setting-control">
 										<div className="gamma-button-group">
-											{[1.0, 1.1, 1.2, 1.3, 1.4, 1.5].map(value => (
+											{[0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6].map(value => (
 												<button
 													key={value}
 													className={`gamma-btn ${this.state.currentSettings.gamma === value ? 'active' : ''} ${this.isOnCooldown('gamma') ? 'disabled' : ''}`}
@@ -438,7 +465,7 @@ class SettingsPanelBase extends React.Component {
 
                         {/* HUD/Interface Settings */}
                         <div className="settings-section">
-                            <div className="section-title">HUD & Interface (Instant - 15s cooldown)</div>
+                            <div className="section-title">HUD & Interface (Instant - 5s cooldown)</div>
                             <div className="settings-grid">
                                 {[
                                     { key: 'drawgun', label: 'Weapon Movement', tooltip: 'Controls weapon bobbing/swaying animation. When disabled, weapon stays stationary for steadier aim and cleaner view.' },
@@ -481,7 +508,7 @@ class SettingsPanelBase extends React.Component {
 
                         {/* Gameplay Settings */}
                         <div className="settings-section">
-                            <div className="section-title">Gameplay (Instant - 15s cooldown)</div>
+                            <div className="section-title">Gameplay (Instant - 5s cooldown)</div>
                             <div className="settings-grid">
                                 {[
                                     { key: 'nodraw', label: 'Hide Other Players', tooltip: 'Makes other players invisible to reduce visual distractions during runs. Toggle between visible and hidden.' },
