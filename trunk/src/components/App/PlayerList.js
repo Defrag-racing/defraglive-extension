@@ -284,88 +284,149 @@ class PlayerListBase extends React.Component {
 		return player.c1 === botSecret;
 	}
 
-    // ENHANCED: This now prioritizes serverstate players and enriches them with API data when available
-    getPlayerWithScores() {
-        // Always start with serverstate players (real-time data)
-        const serverstatePlayersRaw = Object.values(this.props.serverstate.players || {})
-        
-        // Filter out the bot player using configurable secret
-        const serverstatePlayersNonBot = serverstatePlayersRaw.filter(player => !this.isBotPlayer(player))
-        
-        // Try to enrich serverstate data with API data if available
-        let enrichedPlayers = []
-        
-        if (this.state.hasSpectatorData && this.state.serverInfo?.scores?.players) {
-            const apiScores = this.state.serverInfo.scores.players
-            
-            // Enrich serverstate players with API data
-            enrichedPlayers = serverstatePlayersNonBot.map(player => {
-                // Try to match by multiple criteria
-                const scoreData = apiScores.find(score => {
-                    // Try matching by player_num to various ID fields
-                    const idMatch = score.player_num === parseInt(player.id)
-                    const clientIdMatch = player.clientId && score.player_num === player.clientId
-                    const nameMatch = score.name && score.name.toLowerCase() === player.n.toLowerCase()
-                    
-                    return idMatch || clientIdMatch || nameMatch
-                })
-                
-                const follow_num = scoreData ? scoreData.follow_num : -1
-                
-                return {
-                    ...player,
-                    // Prefer serverstate data, supplement with API data
-                    time: scoreData?.time || 0,
-                    follow_num: follow_num,
-                    team: follow_num === -1 ? '0' : '3',
-                    t: player.t || (follow_num === -1 ? '0' : '3'), // Use serverstate 't' if available
-                    nospec: player.nospec,
-                    c1: player.c1,
-                    clientId: player.clientId || parseInt(player.id),
-                    // Add data source indicator for debugging
-                    dataSource: scoreData ? 'serverstate+api' : 'serverstate-only'
-                }
-            })
-            
-            // Check if there are API players not in serverstate (unlikely but possible)
-            const serverstatePlayerNames = serverstatePlayersNonBot.map(p => p.n.toLowerCase())
-            const apiOnlyPlayers = apiScores.filter(score => 
-                score.name && !serverstatePlayerNames.includes(score.name.toLowerCase())
-            ).map(score => ({
-                id: score.player_num,
-                n: score.name,
-                clientId: score.player_num,
-                time: score.time || 0,
-                follow_num: score.follow_num,
-                team: score.follow_num === -1 ? '0' : '3',
-                t: score.follow_num === -1 ? '0' : '3',
-                nospec: 0, // Default to spectatable
-                country: 'Unknown',
-                logged: false,
-                dataSource: 'api-only'
-            }))
-            
-            if (apiOnlyPlayers.length > 0) {
-                enrichedPlayers = [...enrichedPlayers, ...apiOnlyPlayers]
-            }
-            
-        } else {
-            // No API data available, use serverstate only
-            enrichedPlayers = serverstatePlayersNonBot.map(player => ({
-                ...player,
-                time: 0,
-                follow_num: -1,
-                team: player.t || '0', // Use serverstate team if available
-                t: player.t || '0',
-                nospec: player.nospec,
-                c1: player.c1,
-                clientId: player.clientId || parseInt(player.id),
-                dataSource: 'serverstate-only'
-            }))
-        }
-        
-        return enrichedPlayers
-    }
+// Helper function to strip Quake 3 color codes
+stripQuakeColors(text) {
+    if (!text) return ''
+    return text.replace(/\^./g, '').toLowerCase().trim()
+}
+
+// Check if current server is GTK (unreliable ID matching)
+isGTKServer() {
+    const serverIP = this.state.currentServerAddress || this.props.serverstate.ip
+    return serverIP?.includes('83.243.73.220')
+}
+
+	// REVISED: GTK-aware getPlayerWithScores method
+	getPlayerWithScores() {
+		const serverstatePlayersRaw = Object.values(this.props.serverstate.players || {})
+		const serverstatePlayersNonBot = serverstatePlayersRaw.filter(player => !this.isBotPlayer(player))
+		
+		let enrichedPlayers = []
+		
+		if (this.state.hasSpectatorData && this.state.serverInfo?.scores?.players) {
+			const apiScores = this.state.serverInfo.scores.players
+			const isGTK = this.isGTKServer()
+			
+			if (isGTK) {
+				// GTK SERVER SPECIAL HANDLING
+				console.log('[GTK] Using special GTK server logic for player matching')
+				
+				enrichedPlayers = serverstatePlayersNonBot.map(player => {
+					// Try to match by name only (with color stripping)
+					const cleanServerstateName = this.stripQuakeColors(player.n)
+					const scoreData = apiScores.find(score => {
+						const cleanAPIName = this.stripQuakeColors(score.name)
+						return cleanAPIName === cleanServerstateName
+					})
+					
+					if (scoreData) {
+						// Name match found - use API spectator data
+						const follow_num = scoreData.follow_num
+						console.log(`[GTK] Matched "${cleanServerstateName}" -> follow_num: ${follow_num}`)
+						
+						return {
+							...player,
+							time: scoreData.time || 0,
+							follow_num: follow_num,
+							team: follow_num === -1 ? '0' : '3',
+							t: player.t, // Always prefer serverstate team status
+							nospec: player.nospec,
+							c1: player.c1,
+							clientId: scoreData.player_num, // Use API player_num as clientId
+							dataSource: 'gtk-matched'
+						}
+					} else {
+						// No name match - show as regular player from serverstate
+						console.log(`[GTK] No match for "${cleanServerstateName}" - using serverstate only`)
+						
+						return {
+							...player,
+							time: 0,
+							follow_num: -1, // Assume not spectating anyone
+							team: player.t || '0',
+							t: player.t || '0',
+							nospec: player.nospec,
+							c1: player.c1,
+							clientId: parseInt(player.id),
+							dataSource: 'gtk-serverstate-only'
+						}
+					}
+				})
+				
+				// For GTK, don't add API-only players since serverstate is more reliable
+				
+			} else {
+				// NORMAL SERVER HANDLING (non-GTK)
+				enrichedPlayers = serverstatePlayersNonBot.map(player => {
+					// Try multiple matching criteria for non-GTK servers
+					const scoreData = apiScores.find(score => {
+						const idMatch = score.player_num === parseInt(player.id)
+						const clientIdMatch = player.clientId && score.player_num === player.clientId
+						
+						// Name matching as fallback
+						const cleanServerstateName = this.stripQuakeColors(player.n)
+						const cleanAPIName = this.stripQuakeColors(score.name)
+						const nameMatch = cleanAPIName === cleanServerstateName
+						
+						return idMatch || clientIdMatch || nameMatch
+					})
+					
+					const follow_num = scoreData ? scoreData.follow_num : -1
+					
+					return {
+						...player,
+						time: scoreData?.time || 0,
+						follow_num: follow_num,
+						team: follow_num === -1 ? '0' : '3',
+						t: player.t || (follow_num === -1 ? '0' : '3'),
+						nospec: player.nospec,
+						c1: player.c1,
+						clientId: player.clientId || parseInt(player.id),
+						dataSource: scoreData ? 'normal-matched' : 'normal-serverstate-only'
+					}
+				})
+				
+				// Check for API-only players (for non-GTK servers)
+				const serverstatePlayerNames = serverstatePlayersNonBot.map(p => this.stripQuakeColors(p.n))
+				const apiOnlyPlayers = apiScores.filter(score => {
+					const cleanAPIName = this.stripQuakeColors(score.name)
+					return score.name && !serverstatePlayerNames.includes(cleanAPIName)
+				}).map(score => ({
+					id: score.player_num,
+					n: score.name,
+					clientId: score.player_num,
+					time: score.time || 0,
+					follow_num: score.follow_num,
+					team: score.follow_num === -1 ? '0' : '3',
+					t: score.follow_num === -1 ? '0' : '3',
+					nospec: 0,
+					country: 'Unknown',
+					logged: false,
+					dataSource: 'api-only'
+				}))
+				
+				if (apiOnlyPlayers.length > 0) {
+					enrichedPlayers = [...enrichedPlayers, ...apiOnlyPlayers]
+				}
+			}
+			
+		} else {
+			// No API data available - use serverstate only for all servers
+			enrichedPlayers = serverstatePlayersNonBot.map(player => ({
+				...player,
+				time: 0,
+				follow_num: -1,
+				team: player.t || '0',
+				t: player.t || '0',
+				nospec: player.nospec,
+				c1: player.c1,
+				clientId: player.clientId || parseInt(player.id),
+				dataSource: 'serverstate-only'
+			}))
+		}
+		
+		return enrichedPlayers
+	}
 
     getPlayerStatus(player) {
         const statuses = []
@@ -442,12 +503,12 @@ class PlayerListBase extends React.Component {
 		let svgClose = <svg className="playerlist-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Player List"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
 		
 		const playersWithScores = this.getPlayerWithScores()
+		// UPDATED: Use serverstate 't' field instead of unreliable follow_num
 		const activePlayers = playersWithScores.filter(player => 
-			(player.follow_num === -1 || player.follow_num === undefined) && 
 			player.t !== '3'
 		)
 		const allSpectators = playersWithScores.filter(player => 
-			player.follow_num !== -1 && player.follow_num !== undefined
+			player.t === '3'
 		)
 
 		const isOnAfkCooldown = Date.now() < this.state.afkControlCooldown
@@ -461,7 +522,7 @@ class PlayerListBase extends React.Component {
 							(this.props.serverstate.df_promode === '1' ? 'CPM' : 'VQ3')
 		
 		// Calculate total player count from serverstate (most accurate)
-		const totalPlayerCount = Object.keys(this.props.serverstate.players || {}).length
+		const totalPlayerCount = Object.keys(this.props.serverstate.players || {}).length;
 
 		return (
 			<div className={`playerlist-wrap playerlist-${this.props.appstate.isPlayerlistOpen ? 'opened' : 'closed'}`}>
@@ -613,10 +674,27 @@ class PlayerListBase extends React.Component {
 												</thead>
 												<tbody>
 													{activePlayers.map((player) => {
-														// Only look for spectators if we have spectator data
-														const followingSpecs = this.state.hasSpectatorData ? 
-															allSpectators.filter(spec => spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)) : 
-															[]
+														// UPDATED: GTK-aware spectator relationship detection
+														let followingSpecs = []
+														
+														if (this.state.hasSpectatorData) {
+															const isGTK = this.isGTKServer()
+															
+															if (isGTK) {
+																// For GTK servers: Only use follow_num for spectators that were successfully matched by name
+																followingSpecs = allSpectators.filter(spec => {
+																	const hasReliableData = spec.dataSource === 'gtk-matched'
+																	const isFollowingThisPlayer = spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
+																	
+																	return hasReliableData && isFollowingThisPlayer
+																})
+															} else {
+																// For non-GTK servers: Use normal follow_num logic
+																followingSpecs = allSpectators.filter(spec => 
+																	spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
+																)
+															}
+														}
 														
 														const canSpectate = this.canSpectatePlayer(player)
 														const isOnCooldown = this.isOnCooldown(player.n)
@@ -697,21 +775,38 @@ class PlayerListBase extends React.Component {
 												</tbody>
 											</table>
 											
-											{/* Show free spectators only if we have spectator data */}
+											{/* UPDATED: GTK-aware free spectators section */}
 											{this.state.hasSpectatorData && allSpectators.length > 0 && (
 												(() => {
-													// Find spectators who aren't following any active player
+													// Find spectators who aren't following any active player OR don't have reliable data
 													const freeSpectators = allSpectators.filter(spec => {
-														const isFollowingActivePlayer = activePlayers.some(player => 
-															spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
-														)
-														return !isFollowingActivePlayer
+														const isGTK = this.isGTKServer()
+														
+														if (isGTK) {
+															// For GTK: Show as free spectator if no name match OR not following anyone
+															const hasReliableData = spec.dataSource === 'gtk-matched'
+															if (!hasReliableData) {
+																return true // No name match - show as free spectator
+															}
+															
+															// Has reliable data - check if following any active player
+															const isFollowingActivePlayer = activePlayers.some(player => 
+																spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
+															)
+															return !isFollowingActivePlayer
+														} else {
+															// For non-GTK: Normal logic
+															const isFollowingActivePlayer = activePlayers.some(player => 
+																spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
+															)
+															return !isFollowingActivePlayer
+														}
 													})
 													
 													if (freeSpectators.length > 0) {
 														return (
 															<div className="free-spectators">
-																<div className="header">Free Spectators</div>
+																<div className="header">Spectators</div>
 																<table className="players-table" style={{ fontSize: '0.85rem' }}>
 																	<tbody>
 																		{freeSpectators.map((spec) => (
@@ -724,7 +819,13 @@ class PlayerListBase extends React.Component {
 																							onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
 																							onMouseLeave={() => this.setState({ hoveredPlayer: null })}
 																						>
-																							<Q3STR s={spec.n}/> <span className="spectating-info">(free spectator)</span>
+																							<Q3STR s={spec.n}/> 
+																							<span className="spectating-info">
+																								{spec.dataSource === 'gtk-serverstate-only' ? 
+																									'(spectator unknown)' : 
+																									'(spectator)'
+																								}
+																							</span>
 																							{this.getPlayerStatus(spec).length > 0 && (
 																								<span className="status-indicator">!</span>
 																							)}
@@ -764,4 +865,5 @@ class PlayerListBase extends React.Component {
 		)
 	}
 }
+
 export const PlayerList = connect(mapState, mapDispatch)(PlayerListBase)
