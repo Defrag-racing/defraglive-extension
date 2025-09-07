@@ -3325,8 +3325,8 @@ body {
 
 .idle-arrow-message {
     position: absolute;
-    left: -70px;
-    top: -45px;
+    left: 0;
+    top: 0;
     background: rgba(145, 71, 255, 0.95);
     color: white;
     padding: 10px 15px;
@@ -3336,47 +3336,33 @@ body {
     white-space: nowrap;
     box-shadow: 0 6px 25px rgba(145, 71, 255, 0.7);
     border: 2px solid #9147FF;
-    animation: idle-message-glow 3s ease-in-out infinite;
+    animation: 
+        idle-message-glow 3s ease-in-out infinite,
+        idle-bounce 3s ease-in-out infinite;
     
-    // Speech bubble arrow pointing down to the button
+    // Speech bubble arrow pointing left to the button
     &::after {
         content: '';
         position: absolute;
-        bottom: -12px;
-        left: 50%;
-        transform: translateX(-50%);
+        left: -12px;
+        top: 50%;
+        transform: translateY(-50%);
         width: 0;
         height: 0;
-        border-left: 12px solid transparent;
-        border-right: 12px solid transparent;
-        border-top: 12px solid #9147FF;
+        border-top: 12px solid transparent;
+        border-bottom: 12px solid transparent;
+        border-right: 12px solid #9147FF;
     }
 }
 
-.idle-arrow {
-    width: 60px; // Increased from 40px
-    height: 60px; // Increased from 40px
-    color: #9147FF;
-    animation: 
-        idle-bounce 3s ease-in-out infinite,
-        idle-pulse 2s ease-in-out infinite;
-    
-    .arrow-svg {
-        width: 100%;
-        height: 100%;
-        filter: drop-shadow(0 0 15px rgba(145, 71, 255, 0.8));
-        // Rotate to point left towards the server browser button
-        transform: rotate(90deg);
-    }
-}
 
 // Continuous bounce animation for the arrow - slower and smoother
 @keyframes idle-bounce {
     0%, 100% {
-        transform: translateX(0) rotate(90deg) scale(1);
+        transform: translateX(0) scale(1);
     }
     50% {
-        transform: translateX(-12px) rotate(90deg) scale(1.1);
+        transform: translateX(-12px) scale(1.1);
     }
 }
 
@@ -3412,15 +3398,7 @@ body {
         box-shadow: 0 6px 25px rgba(113, 55, 199, 0.7);
         
         &::after {
-            border-top-color: #7137c7;
-        }
-    }
-    
-    .idle-arrow {
-        color: #7137c7;
-        
-        .arrow-svg {
-            filter: drop-shadow(0 0 15px rgba(113, 55, 199, 0.8));
+            border-right-color: #7137c7;
         }
     }
     
@@ -3452,15 +3430,7 @@ body {
         box-shadow: 0 6px 25px rgba(145, 71, 255, 0.7);
         
         &::after {
-            border-top-color: #9147FF;
-        }
-    }
-    
-    .idle-arrow {
-        color: #9147FF;
-        
-        .arrow-svg {
-            filter: drop-shadow(0 0 15px rgba(145, 71, 255, 0.8));
+            border-right-color: #9147FF;
         }
     }
 }
@@ -3483,13 +3453,417 @@ body {
         .idle-arrow-message {
             font-size: 0.8rem;
             padding: 8px 12px;
-            left: -60px;
-            top: -40px;
+            left: 0;
+            top: 0;
+        }
+    }
+}
+
+// -----------------------------------------------------------------
+// - Permission Popup Styles
+// -----------------------------------------------------------------
+
+/* Permission Popup Styles */
+.permission-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+.permission-popup {
+    background: #2a2a2a;
+    border: 2px solid #9147FF;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease;
+    position: relative;
+}
+
+.popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px 0;
+    
+    h3 {
+        margin: 0;
+        color: #9147FF;
+        font-size: 1.5rem;
+    }
+    
+    .close-btn {
+        background: none;
+        border: none;
+        color: #ccc;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        
+        &:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+    }
+}
+
+.popup-content {
+    padding: 20px;
+    color: #fff;
+    
+    .current-status {
+        background: rgba(255, 193, 7, 0.1);
+        border: 1px solid #ffa000;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        
+        p {
+            margin: 5px 0;
+            
+            strong {
+                color: #ffa000;
+            }
+        }
+    }
+    
+    .instruction-steps {
+        margin: 20px 0;
+        
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            
+            .step-number {
+                background: #9147FF;
+                color: white;
+                width: 25px;
+                height: 25px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 14px;
+                margin-right: 15px;
+                flex-shrink: 0;
+            }
+            
+            .step-content {
+                flex: 1;
+                
+                p {
+                    margin: 0 0 8px 0;
+                    
+                    strong {
+                        color: #9147FF;
+                    }
+                }
+                
+                .extension-icon-demo {
+                    width: 40px;
+                    height: 40px;
+                    background: #9147FF url('../img/ext-imge-70x70.png') no-repeat center;
+                    background-size: 30px 30px;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-top: 5px;
+                    
+                    img {
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 4px;
+                    }
+                }
+            }
+        }
+    }
+    
+    .benefits {
+        background: rgba(76, 175, 80, 0.1);
+        border: 1px solid #4CAF50;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+        
+        h4 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+            font-size: 1.1rem;
         }
         
-        .idle-arrow {
-            width: 50px; // Slightly smaller on mobile but still bigger than before
-            height: 50px;
+        ul {
+            margin: 0;
+            padding-left: 20px;
+            
+            li {
+                margin: 5px 0;
+                color: #e0e0e0;
+            }
+        }
+    }
+    
+    .grant-permission-section {
+        text-align: center;
+        margin: 25px 0;
+        padding: 20px;
+        background: rgba(145, 71, 255, 0.1);
+        border: 2px solid #9147FF;
+        border-radius: 12px;
+        
+        .btn-grant-permission {
+            background: linear-gradient(135deg, #9147FF, #7137c7);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(145, 71, 255, 0.3);
+            
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(145, 71, 255, 0.5);
+                background: linear-gradient(135deg, #7137c7, #5a2ca0);
+            }
+            
+            &:active {
+                transform: translateY(0);
+            }
+        }
+        
+        .grant-info {
+            margin: 10px 0 0 0;
+            color: #bbb;
+            font-size: 0.9rem;
+        }
+    }
+    
+    .manual-instructions {
+        margin-top: 25px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        
+        h4 {
+            margin: 0 0 15px 0;
+            color: #ccc;
+            font-size: 1rem;
+        }
+        
+        .instruction-steps {
+            .step {
+                .step-content {
+                    p {
+                        font-size: 0.9rem;
+                    }
+                }
+                
+                .extension-icon-demo {
+                    width: 30px;
+                    height: 30px;
+                    background-size: 20px 20px;
+                }
+            }
+        }
+    }
+}
+
+.popup-actions {
+    padding: 0 20px 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        
+        &.btn-primary {
+            background: #9147FF;
+            color: white;
+            
+            &:hover {
+                background: #7137c7;
+                transform: translateY(-1px);
+            }
+        }
+        
+        &.btn-secondary {
+            background: transparent;
+            color: #ccc;
+            border: 1px solid #666;
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+                border-color: #999;
+            }
+        }
+    }
+}
+
+.popup-footer {
+    padding: 0 20px 15px;
+    text-align: center;
+    
+    small {
+        color: #888;
+        font-size: 12px;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Theme Support */
+.theme-light {
+    .permission-popup {
+        background: #f5f5f5;
+        color: #333;
+        
+        .popup-header h3 {
+            color: #7137c7;
+        }
+        
+        .close-btn {
+            color: #666;
+            
+            &:hover {
+                color: #333;
+                background: rgba(0, 0, 0, 0.1);
+            }
+        }
+        
+        .current-status {
+            background: rgba(255, 193, 7, 0.15);
+            
+            strong {
+                color: #f57c00;
+            }
+        }
+        
+        .benefits {
+            background: rgba(76, 175, 80, 0.15);
+            
+            h4 {
+                color: #2e7d32;
+            }
+            
+            li {
+                color: #555;
+            }
+        }
+        
+        .step-content strong {
+            color: #7137c7;
+        }
+        
+        .grant-permission-section {
+            background: rgba(113, 55, 199, 0.1);
+            border-color: #7137c7;
+            
+            .btn-grant-permission {
+                background: linear-gradient(135deg, #7137c7, #5a2ca0);
+                box-shadow: 0 4px 15px rgba(113, 55, 199, 0.3);
+                
+                &:hover {
+                    box-shadow: 0 6px 20px rgba(113, 55, 199, 0.5);
+                    background: linear-gradient(135deg, #5a2ca0, #4a2285);
+                }
+            }
+        }
+        
+        .btn-secondary {
+            color: #666;
+            border-color: #ccc;
+            
+            &:hover {
+                background: rgba(0, 0, 0, 0.05);
+                color: #333;
+                border-color: #999;
+            }
+        }
+    }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .permission-popup {
+        max-width: 95%;
+        margin: 10px;
+        
+        .popup-header {
+            padding: 15px 15px 0;
+            
+            h3 {
+                font-size: 1.3rem;
+            }
+        }
+        
+        .popup-content {
+            padding: 15px;
+        }
+        
+        .popup-actions {
+            padding: 0 15px 15px;
+            flex-direction: column;
+            
+            button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+        
+        .instruction-steps .step {
+            .step-content .extension-icon-demo {
+                width: 35px;
+                height: 35px;
+                
+                img {
+                    width: 25px;
+                    height: 25px;
+                }
+            }
         }
     }
 }

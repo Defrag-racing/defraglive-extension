@@ -10,6 +10,7 @@ import { ServerBrowser } from './ServerBrowser'
 import { SettingsPanel } from './SettingsPanel'
 import { unix2time } from '../../util/DateTime'
 import Message from '../../partials/StatusMessages'
+import extensionIcon from '../../img/ext-imge-70x70.png'
 
 class ConsoleBase extends React.Component {
     constructor(props) {
@@ -26,7 +27,11 @@ class ConsoleBase extends React.Component {
             messages_notif: [],
             scrolledUp: false,
             newMessages: 0,
-            fontSize: 'normal' // 'small', 'normal', 'large'
+            fontSize: 'normal', // 'small', 'normal', 'large'
+            showPermissionPopup: false,
+            hidePermissionPrompt: false,
+            permissionSource: 'console', // 'console' or 'notify'
+            hasSeenPermissionPrompt: false // Track if user has already seen the popup this session
         }
 
         // input element ref
@@ -58,6 +63,15 @@ class ConsoleBase extends React.Component {
 
         // NEW: Settings logging method
         this.logSettingsChange = this.logSettingsChange.bind(this)
+        
+        // Permission popup methods
+        this.showPermissionPrompt = this.showPermissionPrompt.bind(this)
+        this.hidePermissionPrompt = this.hidePermissionPrompt.bind(this)
+        this.handlePermissionResponse = this.handlePermissionResponse.bind(this)
+        this.handleKeyPress = this.handleKeyPress.bind(this)
+        this.handleClickOutside = this.handleClickOutside.bind(this)
+        this.handleGrantPermission = this.handleGrantPermission.bind(this)
+        this.renderPermissionPopup = this.renderPermissionPopup.bind(this)
     }
 
     increaseFontSize() {
@@ -78,10 +92,14 @@ class ConsoleBase extends React.Component {
 
     componentWillUnmount() {
         document.removeEventListener('keypress', this.onKeyPress)
+        document.removeEventListener('keydown', this.handleKeyPress)
+        document.removeEventListener('click', this.handleClickOutside)
     }
 
     componentDidMount() {
         document.addEventListener('keypress', this.onKeyPress)
+        document.addEventListener('keydown', this.handleKeyPress)
+        document.addEventListener('click', this.handleClickOutside)
 
         window.sendTranslationRequest = this.sendTranslationRequest;
 
@@ -291,7 +309,127 @@ class ConsoleBase extends React.Component {
         this.appendMessage(logMessage)
 
         // Also log to browser console for debugging
-        console.log(`[SETTINGS CHANGE] ${username} changed:`, settings)
+        // Settings change logged
+    }
+
+    // Check if user should see permission prompt
+    showPermissionPrompt(source = 'console') {
+        // Permission prompt called
+        
+        // Don't show if user has already seen the popup this session
+        if (this.state.hasSeenPermissionPrompt) {
+            // User has already seen permission prompt this session - skipping
+            // Still trigger the intended action (console/notify)
+            this.directAction(source)
+            return
+        }
+        
+        // Show the popup with a small delay to prevent immediate closure from click bubbling
+        setTimeout(() => {
+            this.setState({ 
+                showPermissionPopup: true, 
+                permissionSource: source,
+                hasSeenPermissionPrompt: true // Mark as seen
+            }, () => {
+                // Permission popup state updated
+            })
+        }, 10)
+    }
+    
+    // Directly perform the action without showing popup
+    directAction(source) {
+        setTimeout(() => {
+            if (source === 'console') {
+                this.props.toggleConsole()
+                setTimeout(() => {
+                    if(this.props.appstate.isConsoleOpen) {
+                        this.inputEl.current?.focus()
+                        if (this.scrollerEl.current && !this.state.scrolledUp) {
+                            this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight - this.scrollerEl.current.clientHeight
+                        }
+                    }
+                }, 50)
+            } else if (source === 'notify') {
+                this.props.toggleNotify()
+            }
+        }, 10)
+    }
+
+    // Hide the popup and then show console or notify based on source
+    hidePermissionPrompt(showActionAfter = true) {
+        const source = this.state.permissionSource
+        this.setState({ showPermissionPopup: false })
+        
+        // If requested, show the appropriate action after hiding popup
+        if (showActionAfter) {
+            setTimeout(() => {
+                if (source === 'console') {
+                    this.props.toggleConsole()
+                    setTimeout(() => {
+                        if(this.props.appstate.isConsoleOpen) {
+                            // Focus on the input
+                            this.inputEl.current?.focus()
+
+                            // Keep the scrollbar at the bottom if not scrolled up
+                            if (this.scrollerEl.current && !this.state.scrolledUp) {
+                                this.scrollerEl.current.scrollTop = this.scrollerEl.current.scrollHeight - this.scrollerEl.current.clientHeight
+                            }
+                        }
+                    }, 50)
+                } else if (source === 'notify') {
+                    this.props.toggleNotify()
+                    setTimeout(() => {
+                        if(this.props.appstate.isNotifyOpen) {
+                            // Focus would be handled by NotifyLines component
+                        }
+                    }, 50)
+                }
+            }, 100)
+        }
+    }
+
+    // Handle user response to permission prompt
+    handlePermissionResponse() {
+        // Permission response - hiding popup
+        // Just hide the popup
+        this.hidePermissionPrompt()
+    }
+    
+    // Handle grant permission button click
+    handleGrantPermission() {
+        // Grant permission button clicked
+        
+        // Use Twitch Extension API to request identity sharing
+        if (window.Twitch && window.Twitch.ext && window.Twitch.ext.actions) {
+            window.Twitch.ext.actions.requestIdShare()
+            // Requested identity share from Twitch
+        } else {
+            // Twitch extension API not available
+            // Fallback: show instructions
+            alert('Please click the extension icon and enable "Grant Permission" in the settings.')
+        }
+        
+        // Hide the popup after requesting permission
+        this.hidePermissionPrompt()
+    }
+
+    // Handle keyboard press (hide popup)
+    handleKeyPress(e) {
+        // Key press handler
+        if (this.state.showPermissionPopup) {
+            // Hiding popup via key press
+            this.hidePermissionPrompt()
+        }
+    }
+
+    // Handle click outside popup (hide popup)
+    handleClickOutside(e) {
+        // Click outside handler
+        if (this.state.showPermissionPopup && 
+            !e.target.closest('.permission-popup')) {
+            // Hiding popup via click outside
+            this.hidePermissionPrompt()
+        }
     }
 
 	onConsoleMessage(ev) {
@@ -380,6 +518,35 @@ class ConsoleBase extends React.Component {
 	}
 
     toggleConsole(e) {
+        // Toggle console called
+        
+        // Prevent event bubbling that could immediately close the popup
+        if (e) {
+            e.stopPropagation()
+            e.preventDefault()
+        }
+        
+        // Check if user needs permissions (guest OR viewer without proper access)
+        const hasRealUsername = this.props.twitchUser.name && 
+                               !this.props.twitchUser.name.includes('User_') &&
+                               !this.props.twitchUser.name.includes('viewer-') && 
+                               !this.props.twitchUser.name.includes('anonymous')
+        
+        const needsPermissions = (
+            this.props.twitchUser.role === 'guest' || 
+            (this.props.twitchUser.role === 'viewer' && !hasRealUsername)
+        );
+        
+        // Permission check completed
+        
+        if (needsPermissions && !this.state.hidePermissionPrompt) {
+            // Showing permission prompt
+            this.showPermissionPrompt()
+            return
+        }
+
+        // Normal console toggle
+        // Normal console toggle logic
         this.props.toggleConsole()
 
         setTimeout(() => {
@@ -587,7 +754,7 @@ class ConsoleBase extends React.Component {
 	sendWS(msg) {
 		
 		if(!this.ws) {
-			console.log('No WebSocket connection')
+			// No WebSocket connection
 			return false
 		}
 
@@ -656,6 +823,96 @@ class ConsoleBase extends React.Component {
         return true
     }
 
+    // Add to render method
+    renderPermissionPopup() {
+        // Render permission popup
+        if (!this.state.showPermissionPopup) return null
+        
+        return (
+            <div className="permission-popup-overlay">
+                <div className="permission-popup">
+                    <div className="popup-header">
+                        <h3>Unlock Full Features</h3>
+                        <button 
+                            className="close-btn" 
+                            onClick={this.hidePermissionPrompt}
+                        >
+                            ×
+                        </button>
+                    </div>
+                    
+                    <div className="popup-content">
+                        <div className="current-status">
+                            <p>Currently showing as: <strong>{this.props.twitchUser.name}</strong></p>
+                            <p>Grant permission to show your actual Twitch nickname and unlock all features!</p>
+                        </div>
+                        
+                        <div className="benefits">
+                            <h4>Granting permission enables:</h4>
+                            <ul>
+                                <li>Your real Twitch username display</li>
+                                <li>Server switching capabilities</li>
+                                <li>Player spectating controls</li>
+                                <li>Chat commands and interaction</li>
+                            </ul>
+                        </div>
+                        
+                        <div className="grant-permission-section">
+                            <button 
+                                className="btn-grant-permission" 
+                                onClick={this.handleGrantPermission}
+                            >
+                                🔓 Grant Permission Now
+                            </button>
+                            <p className="grant-info">This will show a Twitch permission dialog</p>
+                        </div>
+                        
+                        <div className="manual-instructions">
+                            <h4>Or do it manually:</h4>
+                            <div className="instruction-steps">
+                                <div className="step">
+                                    <span className="step-number">1</span>
+                                    <div className="step-content">
+                                        <p>Click the extension icon</p>
+                                        <div className="extension-icon-demo">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="step">
+                                    <span className="step-number">2</span>
+                                    <div className="step-content">
+                                        <p>Click <strong>"Manage Access"</strong></p>
+                                    </div>
+                                </div>
+                                
+                                <div className="step">
+                                    <span className="step-number">3</span>
+                                    <div className="step-content">
+                                        <p>Toggle <strong>"Grant Permission"</strong> to ON</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div className="popup-actions">
+                        <button 
+                            className="btn-primary" 
+                            onClick={this.handlePermissionResponse}
+                        >
+                            Got it!
+                        </button>
+                    </div>
+                    
+                    <div className="popup-footer">
+                        <small>Press any key or click anywhere to close</small>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
 render() {
     let statusMessage = this.state.status_message !== null ? <Message type={this.state.status_message.type} message={this.state.status_message.message}/> : null
     let svgClose = <svg className="say-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Console"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
@@ -720,11 +977,20 @@ render() {
 						</div>
 					</form>
 				</div>
-				<NotifyLines onSubmit={this.submitMessage} console={this.state}/>
+				<NotifyLines 
+					onSubmit={this.submitMessage} 
+					console={this.state}
+					twitchUser={this.props.twitchUser}
+					onShowPermissionPrompt={this.showPermissionPrompt}
+					hidePermissionPrompt={this.state.hidePermissionPrompt}
+				/>
 				<PlayerList sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
 				<ServerBrowser sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
 				<SettingsPanel sendCommand={this.sendCommand} twitchUser={this.props.twitchUser}/>
 				<CurrentPlayerName/>
+				
+				{/* Add permission popup */}
+				{this.renderPermissionPopup()}
 			</>
 		)
 	}

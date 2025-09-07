@@ -309,7 +309,7 @@ isGTKServer() {
 			
 			if (isGTK) {
 				// GTK SERVER SPECIAL HANDLING
-				console.log('[GTK] Using special GTK server logic for player matching')
+				// GTK server logic - debug logging disabled
 				
 				enrichedPlayers = serverstatePlayersNonBot.map(player => {
 					// Try to match by name only (with color stripping)
@@ -322,7 +322,7 @@ isGTKServer() {
 					if (scoreData) {
 						// Name match found - use API spectator data
 						const follow_num = scoreData.follow_num
-						console.log(`[GTK] Matched "${cleanServerstateName}" -> follow_num: ${follow_num}`)
+						// Debug: GTK matched player
 						
 						return {
 							...player,
@@ -337,7 +337,7 @@ isGTKServer() {
 						}
 					} else {
 						// No name match - show as regular player from serverstate
-						console.log(`[GTK] No match for "${cleanServerstateName}" - using serverstate only`)
+						// Debug: GTK no match found
 						
 						return {
 							...player,

@@ -107,16 +107,6 @@ class IdleServerBrowserArrowBase extends React.Component {
                 <div className="idle-arrow-message">
                     Click here to switch servers!
                 </div>
-                <div className="idle-arrow">
-                    <svg 
-                        className="arrow-svg" 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        viewBox="0 0 24 24" 
-                        fill="currentColor"
-                    >
-                        <path d="M7.41 8.84L12 13.42l4.59-4.58L18 10.25l-6 6-6-6z"/>
-                    </svg>
-                </div>
             </div>
         )
     }

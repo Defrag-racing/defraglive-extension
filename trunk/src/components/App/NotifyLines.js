@@ -63,6 +63,34 @@ class NotifyLinesBase extends React.Component {
 	}
 
 	toggleNotify(e) {
+		// NotifyLines toggle called
+		
+		// Prevent event bubbling that could immediately close the popup
+		if (e) {
+			e.stopPropagation()
+			e.preventDefault()
+		}
+		
+		// Check if user needs permissions (guest OR viewer without proper access)
+		const hasRealUsername = this.props.twitchUser?.name && 
+								!this.props.twitchUser.name.includes('User_') &&
+								!this.props.twitchUser.name.includes('viewer-') && 
+								!this.props.twitchUser.name.includes('anonymous');
+		
+		const needsPermissions = (
+			this.props.twitchUser?.role === 'guest' || 
+			(this.props.twitchUser?.role === 'viewer' && !hasRealUsername)
+		);
+		
+		if (needsPermissions && !this.props.hidePermissionPrompt) {
+			// NotifyLines showing permission prompt
+			if (this.props.onShowPermissionPrompt) {
+				this.props.onShowPermissionPrompt('notify')
+				return
+			}
+		}
+
+		// NotifyLines normal toggle
 		this.props.toggleNotify()
 
 		setTimeout(() => {
@@ -89,6 +117,25 @@ class NotifyLinesBase extends React.Component {
 			if(!this.props.appstate.isConsoleOpen) {
 				if(key === 'KeyT') {
 					e.preventDefault()
+					// KeyT pressed in NotifyLines
+					// Check if user needs permissions (guest OR viewer without proper access)
+					const hasRealUsername = this.props.twitchUser?.name && 
+											!this.props.twitchUser.name.includes('User_') &&
+											!this.props.twitchUser.name.includes('viewer-') && 
+											!this.props.twitchUser.name.includes('anonymous');
+					
+					const needsPermissions = (
+						this.props.twitchUser?.role === 'guest' || 
+						(this.props.twitchUser?.role === 'viewer' && !hasRealUsername)
+					);
+					
+					if (needsPermissions && !this.props.hidePermissionPrompt) {
+						// KeyT: NotifyLines showing permission prompt
+						if (this.props.onShowPermissionPrompt) {
+							this.props.onShowPermissionPrompt('notify')
+							return
+						}
+					}
 					this.toggleNotify()
 					return
 				}
