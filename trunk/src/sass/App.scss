@@ -1079,22 +1079,28 @@ body {
 .curr-player-wrap {
     color: #fff;
     position: absolute;
-    left: 0;
-    right: 0;
-    margin-left: auto; 
-    margin-right: auto; 
+    left: 50%;
+    transform: translateX(-50%);
     bottom: 5rem;
-    height: 60px;
     font-size: 1.7rem;
     text-align: center;
-    font-weight: normal;
+    font-weight: 500;
     z-index: 2;
-    max-width: 90%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-shadow: rgba(0, 0, 0, 0.7) 1px 1px 1px;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 1),
+        0 0 8px rgba(0, 0, 0, 0.8);
     user-select: none;
+    
+    // Compact grey background that fits the text
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 8px;
+    border-radius: 8px;
+    width: auto;
+    max-width: 80%;
+    display: inline-block;
 }
 
 // -----------------------------------------------------------------
@@ -1929,113 +1935,161 @@ body {
             }
             
             .twitch-live-indicator {
-                color: #ff4444;
-                font-size: 0.7rem;
+                color: #9146ff;
+                background-color: rgba(145, 70, 255, 0.15);
+                font-size: 0.75rem;
                 font-weight: bold;
-                margin-left: 5px;
+                margin-left: 6px;
+                padding: 2px 6px;
+                border-radius: 10px;
+                border: 1px solid rgba(145, 70, 255, 0.4);
                 animation: pulse 2s infinite;
+                text-shadow: 0 0 6px rgba(145, 70, 255, 0.8);
+                box-shadow: 0 0 8px rgba(145, 70, 255, 0.3);
             }
             
             .twitch-streamer {
+                background-color: rgba(145, 70, 255, 0.08);
+                border-left: 3px solid rgba(145, 70, 255, 0.6);
+                padding-left: 8px;
+                margin-left: -8px;
+                
                 &:hover {
-                    background-color: rgba(147, 83, 255, 0.1);
+                    background-color: rgba(145, 70, 255, 0.15);
+                    border-left-color: #9146ff;
+                    box-shadow: 0 0 12px rgba(145, 70, 255, 0.4);
                 }
                 
                 cursor: pointer !important;
+                
+                .player-name {
+                    color: #b380ff;
+                    font-weight: 600;
+                }
             }
             
             .server-header {
                 margin-bottom: 8px;
             }
             
-            .connect-to-server-btn {
-                position: relative;
-                background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: 2px solid transparent;
-                border-radius: 12px;
-                padding: 12px 20px;
-                font-size: 0.8rem;
-                font-weight: 600;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                width: 100%;
-                justify-content: center;
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                overflow: hidden;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+            .connect-to-server-btn,
+            button.connect-to-server-btn {
+                position: relative !important;
+                background: linear-gradient(135deg, #28a745 0%, #20c997 50%, #17a2b8 100%) !important;
+                color: white !important;
+                border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                border-radius: 12px !important;
+                padding: 10px 16px !important;
+                font-size: 0.8rem !important;
+                font-weight: 700 !important;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                cursor: pointer !important;
+                display: flex !important;
+                align-items: center !important;
+                width: 100% !important;
+                justify-content: center !important;
+                /* transition removed to allow animation to work */
+                overflow: hidden !important;
+                text-transform: uppercase !important;
+                letter-spacing: 1px !important;
+                backdrop-filter: blur(15px) saturate(150%) !important;
+                box-shadow: 
+                    0 8px 25px rgba(40, 167, 69, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                    0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+                animation: connect-button-pulse 2s ease-in-out infinite alternate !important;
                 
                 &::before {
                     content: '';
                     position: absolute;
                     inset: 0;
-                    background: linear-gradient(145deg, rgba(255,255,255,0.1), transparent);
+                    background: linear-gradient(135deg, 
+                        rgba(255, 255, 255, 0.1) 0%, 
+                        transparent 50%, 
+                        rgba(145, 70, 255, 0.1) 100%);
                     opacity: 0;
-                    transition: opacity 0.3s ease;
+                    transition: opacity 0.4s ease;
+                    border-radius: inherit;
+                }
+                
+                &::after {
+                    content: '';
+                    position: absolute;
+                    inset: -2px;
+                    background: linear-gradient(135deg, #667eea, #764ba2, #9146ff, #667eea);
+                    background-size: 300% 300%;
+                    border-radius: inherit;
+                    z-index: -1;
+                    opacity: 0;
+                    transition: opacity 0.4s ease;
+                    animation: gradient-flow 3s ease infinite;
                 }
                 
                 &:hover:not(:disabled) {
-                    background: linear-gradient(145deg, #764ba2 0%, #667eea 100%);
-                    transform: translateY(-3px) scale(1.02);
-                    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
-                    border-color: rgba(255,255,255,0.3);
+                    background: linear-gradient(135deg, #20c997 0%, #17a2b8 50%, #28a745 100%) !important;
+                    transform: translateY(-3px) scale(1.05) !important;
+                    box-shadow: 
+                        0 15px 45px rgba(40, 167, 69, 0.4),
+                        0 0 0 1px rgba(255, 255, 255, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+                    border-color: rgba(255, 255, 255, 0.6) !important;
+                    /* keep animation running on hover */
                     
                     &::before {
                         opacity: 1;
                     }
                     
-                    .connect-icon {
-                        animation: bounce 0.6s ease;
+                    &::after {
+                        opacity: 1;
+                    }
+                    
+                    .connect-text {
+                        text-shadow: 0 0 15px rgba(255, 255, 255, 0.8) !important;
+                        transform: scale(1.05) !important;
                     }
                 }
                 
                 &:active:not(:disabled) {
-                    transform: translateY(-1px) scale(1.01);
-                    transition: all 0.1s ease;
+                    transform: translateY(-2px) scale(1.02);
+                    /* transition removed to preserve animation */
+                    box-shadow: 
+                        0 8px 25px rgba(102, 126, 234, 0.3),
+                        inset 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
                 
                 &.disabled {
-                    background: linear-gradient(145deg, #4a5568, #2d3748);
+                    background: linear-gradient(135deg, #374151, #1f2937, #111827);
                     cursor: not-allowed;
-                    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+                    border-color: rgba(255, 255, 255, 0.1);
                     
                     .connect-text {
-                        opacity: 0.6;
+                        opacity: 0.5;
                     }
                     
                     .connect-icon {
-                        opacity: 0.6;
+                        opacity: 0.5;
                     }
                 }
                 
-                .connect-icon {
-                    font-size: 1.1rem;
-                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-                }
-                
                 .connect-text {
-                    flex: 1;
-                    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    font-weight: 700;
                 }
                 
                 .connect-btn-ripple {
                     position: absolute;
                     inset: 0;
-                    background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 60%);
+                    background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
                     transform: scale(0);
                     border-radius: inherit;
-                    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                    transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                 }
                 
                 &:active:not(:disabled) .connect-btn-ripple {
-                    transform: scale(1.2);
-                    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    transform: scale(1.5);
+                    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                 }
             }
         }
@@ -3875,6 +3929,38 @@ body {
     }
 }
 
+@keyframes gradient-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes connect-button-pulse {
+    0% {
+        box-shadow: 
+            0 8px 25px rgba(40, 167, 69, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.15),
+            0 0 20px rgba(40, 167, 69, 0.2);
+        transform: scale(1);
+    }
+    100% {
+        box-shadow: 
+            0 12px 35px rgba(40, 167, 69, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.25),
+            0 0 25px rgba(40, 167, 69, 0.3);
+        transform: scale(1.01);
+    }
+}
+
+
 @keyframes bounce {
     0%, 20%, 50%, 80%, 100% {
         transform: translateY(0);
@@ -4179,9 +4265,46 @@ html {
         2px -2px 0 #000,
         -2px 2px 0 #000,
         2px 2px 0 #000;
-    
-    background: rgba(0,0,0,0.3);
-    padding: 8px 14px;
-    border-radius: 4px;
     display: inline-block;
+    
+    /* White outline specifically for black text in spectated player names */
+    .qcolor0 {
+        text-shadow: 
+            -1px -1px 0 #ffffff,
+            1px -1px 0 #ffffff,
+            -1px 1px 0 #ffffff,
+            1px 1px 0 #ffffff,
+            0 0 3px rgba(255, 255, 255, 0.8);
+    }
+}
+
+/* CONNECT BUTTON - HIGHEST PRIORITY OVERRIDE */
+.connect-to-server-btn,
+button.connect-to-server-btn,
+.serverbrowser-container .connect-to-server-btn {
+    position: relative !important;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 50%, #17a2b8 100%) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 12px !important;
+    padding: 10px 16px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    backdrop-filter: blur(15px) saturate(150%) !important;
+    box-shadow: 
+        0 8px 25px rgba(40, 167, 69, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+    animation: connect-button-pulse 2s ease-in-out infinite alternate !important;
+    transform-origin: center !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
 }
