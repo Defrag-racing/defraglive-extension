@@ -171,20 +171,12 @@ class ServerBrowserBase extends React.Component {
 			    
 			    const allPlayersMatch = allServerstatePlayersMatch && allApiPlayersMatch && !hasDuplicateMatches
 			    
-			    console.log('[ServerBrowser] Matching debug:')
-			    console.log('  Serverstate players:', serverstatePlayerNames)
-			    console.log('  API players:', apiPlayerNames)
-			    console.log('  allServerstatePlayersMatch:', allServerstatePlayersMatch)
-			    console.log('  allApiPlayersMatch:', allApiPlayersMatch) 
-			    console.log('  hasDuplicateMatches:', hasDuplicateMatches)
-			    console.log('  allPlayersMatch:', allPlayersMatch)
-			    
 			    if (allPlayersMatch) {
 			        // Use enriched data from API since all players match
-			        console.log('[ServerBrowser] ✅ All players match - using enriched API data')
+			        console.log('[ServerBrowser] All players match - using enriched API data')
 			    } else {
 			        // Use serverstate data since it has more complete player list
-			        console.log('[ServerBrowser] ❌ Player lists differ - using serverstate data')
+			        console.log('[ServerBrowser] Player lists differ - using serverstate data')
 			        activeServers[currentServerAddress] = currentServerData
 			    }
 			} else if (currentServerData && currentServerAddress && !activeServers[currentServerAddress]) {
