@@ -3,13 +3,25 @@ import { Q3STR } from '../../partials/Quake3'
 import { mapDispatch, mapState } from './State'
 import { connect } from 'react-redux'
 
-const PHYSICS_TYPES = {
-    'vq3': 'VQ3',
-    'cpm': 'CPM',
-    'cpm.1': 'CPM FC',
-    'cpm.2': 'CPM FC',
-    'cpm-ctf2': 'CPM CTF',
-    'vq3.7': 'VQ3 FS',
+const SV_TYPE = {
+    '0': 'auto',
+    '1': 'defrag',
+    '2': 'tricks',
+    '3': 'fastcaps',
+    '4': 'reserved',
+    '5': 'run',
+    '6': 'freestyle',
+    '7': 'fastcaps',
+}
+
+const FASTCAPS_MODES = {
+    '1': 'FC Mode 1 (No weapons, No movement aids)',
+    '2': 'FC Mode 2 (Weapons + Movement aids)',
+    '3': 'FC Mode 3 (No weapons, Movement aids)',
+    '4': 'FC Mode 4 (Weapons, No movement aids)',
+    '5': 'FC Mode 5 (Swinging hook)',
+    '6': 'FC Mode 6 (Quake3 hook)',
+    '7': 'FC Mode 7 (Vanilla Quake3)',
 }
 
 export function ServerBrowserLoader(props) {
@@ -358,6 +370,36 @@ class ServerBrowserBase extends React.Component {
         return c1.includes(',live')
     }
 
+    // Parse physics string to human-readable format
+    parsePhysicsType(physicsString) {
+        if (!physicsString) return null
+
+        // Handle basic physics types
+        if (physicsString === 'vq3') return 'VQ3'
+        if (physicsString === 'cpm') return 'CPM'
+
+        // Parse complex physics strings
+        const fastcapsMatch = physicsString.match(/^(vq3|cpm)-ctf(\d)$/i)
+        if (fastcapsMatch) {
+            const [, physics, mode] = fastcapsMatch
+            const physicsLabel = physics.toUpperCase()
+            const modeDescription = FASTCAPS_MODES[mode] || `FC Mode ${mode}`
+            return `${physicsLabel} ${modeDescription}`
+        }
+
+        // Parse regular game mode physics strings
+        const gameModeMatch = physicsString.match(/^(vq3|cpm)\.(\d)$/i)
+        if (gameModeMatch) {
+            const [, physics, gameType] = gameModeMatch
+            const physicsLabel = physics.toUpperCase()
+            const gameMode = SV_TYPE[gameType] || `mode ${gameType}`
+            return `${physicsLabel} ${gameMode}`
+        }
+
+        // Fallback: return capitalized string
+        return physicsString.toUpperCase()
+    }
+
     // Get Twitch app access token
     async getTwitchAccessToken() {
         // Twitch extensions have strict CSP that blocks OAuth token requests to id.twitch.tv
@@ -592,7 +634,7 @@ class ServerBrowserBase extends React.Component {
                             </div>
                             
                             <div className="detail-row">
-                                <span className="server-physics">{PHYSICS_TYPES[server.defrag] || server.defrag.toUpperCase()}</span>
+                                <span className="server-physics">{this.parsePhysicsType(server.defrag) || 'Unknown'}</span>
                                 <span className="player-count-inline">Players: {playerCount}</span>
                             </div>
                         </div>
@@ -749,6 +791,16 @@ class ServerBrowserBase extends React.Component {
 								</div>
 							</div>
                         </div>
+                        
+                        <div className="twitch-explanation">
+                            <div className="explanation-title">🟣 Twitch Integration</div>
+                            <div className="explanation-content">
+                                <span><strong>🔴 CURRENTLY LIVE</strong> - Player is streaming live on Twitch</span>
+                                <span><strong>🟣 TWITCH</strong> - Player has Twitch account (offline)</span>
+                                <span>Click any player name with Twitch indicators to open their stream</span>
+                            </div>
+                        </div>
+                        
                         <div className="section">
                             <div className="content" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
                                 {this.state.loading && (

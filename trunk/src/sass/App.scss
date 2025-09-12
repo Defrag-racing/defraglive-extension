@@ -4396,3 +4396,36 @@ button.connect-to-server-btn,
         }
     }
 }
+
+/* Twitch Explanation Styling */
+.twitch-explanation {
+    background: rgba(145, 70, 255, 0.05);
+    border: 1px solid rgba(145, 70, 255, 0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    
+    .explanation-title {
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: #9146ff;
+        margin-bottom: 4px;
+    }
+    
+    .explanation-content {
+        font-size: 0.65rem;
+        color: rgba(255, 255, 255, 0.8);
+        line-height: 1.3;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        
+        span {
+            display: block;
+        }
+        
+        strong {
+            color: #fff;
+        }
+    }
+}

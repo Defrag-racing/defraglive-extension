@@ -14,18 +14,20 @@ const SV_TYPE = {
     '6': 'freestyle',
     '7': 'fastcaps',
 }
+
 const PHYSICS = {
     '0': 'VQ3',
     '1': 'CPM',
 }
 
-const PHYSICS_TYPES = {
-    'vq3': 'VQ3',
-    'cpm': 'CPM',
-    'cpm.1': 'CPM FC',
-    'cpm.2': 'CPM FC',
-    'cpm-ctf2': 'CPM CTF',
-    'vq3.7': 'VQ3 FS',
+const FASTCAPS_MODES = {
+    '1': 'FC Mode 1 (No weapons, No movement aids)',
+    '2': 'FC Mode 2 (Weapons + Movement aids)',
+    '3': 'FC Mode 3 (No weapons, Movement aids)',
+    '4': 'FC Mode 4 (Weapons, No movement aids)',
+    '5': 'FC Mode 5 (Swinging hook)',
+    '6': 'FC Mode 6 (Quake3 hook)',
+    '7': 'FC Mode 7 (Vanilla Quake3)',
 }
 
 export function PlayerListLoader(props) {
@@ -315,6 +317,36 @@ class PlayerListBase extends React.Component {
         }
     }
 
+    // Parse physics string to human-readable format
+    parsePhysicsType(physicsString) {
+        if (!physicsString) return null
+
+        // Handle basic physics types
+        if (physicsString === 'vq3') return 'VQ3'
+        if (physicsString === 'cpm') return 'CPM'
+
+        // Parse complex physics strings
+        const fastcapsMatch = physicsString.match(/^(vq3|cpm)-ctf(\d)$/i)
+        if (fastcapsMatch) {
+            const [, physics, mode] = fastcapsMatch
+            const physicsLabel = physics.toUpperCase()
+            const modeDescription = FASTCAPS_MODES[mode] || `FC Mode ${mode}`
+            return `${physicsLabel} ${modeDescription}`
+        }
+
+        // Parse regular game mode physics strings
+        const gameModeMatch = physicsString.match(/^(vq3|cpm)\.(\d)$/i)
+        if (gameModeMatch) {
+            const [, physics, gameType] = gameModeMatch
+            const physicsLabel = physics.toUpperCase()
+            const gameMode = SV_TYPE[gameType] || `mode ${gameType}`
+            return `${physicsLabel} ${gameMode}`
+        }
+
+        // Fallback: return capitalized string
+        return physicsString.toUpperCase()
+    }
+
 // Helper function to strip Quake 3 color codes
 stripQuakeColors(text) {
     if (!text) return ''
@@ -554,7 +586,7 @@ isGTKServer() {
 		const serverName = this.state.serverName || this.props.serverstate.hostname || 'Unknown Server'
 		const serverMap = this.props.serverstate.mapname || 'Unknown'
 		const serverPhysics = this.state.serverInfo?.defrag ? 
-							(PHYSICS_TYPES[this.state.serverInfo.defrag] || this.state.serverInfo.defrag.toUpperCase()) : 
+							this.parsePhysicsType(this.state.serverInfo.defrag) : 
 							(this.props.serverstate.df_promode === '1' ? 'CPM' : 'VQ3')
 		
 		// Calculate total player count from serverstate (most accurate)
@@ -605,6 +637,17 @@ isGTKServer() {
 								</div>
 							</div>
 						</div>
+						
+						<div className="twitch-explanation">
+							<div className="explanation-title">🟣 Twitch Integration</div>
+							<div className="explanation-content">
+								<span><strong>🔴 CURRENTLY LIVE</strong> - Player is streaming live on Twitch</span>
+								<span><strong>🟣 TWITCH</strong> - Player has Twitch account (offline)</span>
+								<span>Regular players: Click name to spectate, click Twitch URL to watch stream</span>
+								<span>Players with "(Twitch Only)": Click name to open Twitch (spectating disabled)</span>
+							</div>
+						</div>
+						
 						<div className="section" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
 							{/* Left Column - Server Info */}
 							<div style={{ flex: '0 0 32%', minWidth: '150px' }}>
