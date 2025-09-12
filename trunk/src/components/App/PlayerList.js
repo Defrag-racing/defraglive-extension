@@ -284,6 +284,37 @@ class PlayerListBase extends React.Component {
 		return player.c1 === botSecret;
 	}
 
+    // Extract Twitch username from player c1 field
+    getTwitchUsername(player) {
+        const c1 = player.c1 || ''
+        // Match patterns like "twitch.tv/username,live", "nospec.twitch.tv/username,not"
+        const twitchMatch = c1.match(/(?:nospec\.)?(?:twitch\.tv\/|tw\.tv\/)([\w\d_]+)(?:,(?:live|not))?/i)
+        return twitchMatch ? twitchMatch[1] : null
+    }
+
+    // Check if player is currently live on Twitch based on c1 field
+    isPlayerLive(player) {
+        const c1 = player.c1 || ''
+        // Check if c1 field contains ",live" suffix
+        return c1.includes(',live')
+    }
+
+    // Check if player has nospec Twitch setting (nospec.twitch.tv/)
+    hasNospecTwitch(player) {
+        const c1 = player.c1 || ''
+        return c1.includes('nospec.twitch.tv/')
+    }
+
+    // Handle Twitch link clicks
+    handleTwitchClick(player, event) {
+        event.stopPropagation() // Prevent spectating when clicking Twitch link
+        const twitchUsername = this.getTwitchUsername(player)
+        if (twitchUsername) {
+            const twitchUrl = `https://www.twitch.tv/${twitchUsername}`
+            window.open(twitchUrl, '_blank')
+        }
+    }
+
 // Helper function to strip Quake 3 color codes
 stripQuakeColors(text) {
     if (!text) return ''
@@ -476,6 +507,11 @@ isGTKServer() {
 	canSpectatePlayer(player) {        
 		// Don't allow spectating spectators (t === '3' or follow_num !== -1)
 		if (player.t === '3' || player.follow_num !== -1) {
+			return false;
+		}
+		
+		// Check for nospec.twitch.tv - disallow spectating, only allow Twitch redirect
+		if (this.hasNospecTwitch(player)) {
 			return false;
 		}
 		
@@ -705,10 +741,19 @@ isGTKServer() {
 																	<td style={{ padding: '3px 6px' }}>
 																		<div className="player-row">
 																			<div 
-																				className={`player-info ${canSpectate ? 'link' : 'nospec-link'} ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''}`}
-																				onClick={canSpectate ? () => this.spectatePlayerID(player.id) : undefined}
+																				className={`player-info ${canSpectate && !this.hasNospecTwitch(player) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(player) ? 'twitch-player' : ''}`}
+																				onClick={
+																					this.hasNospecTwitch(player) ? 
+																						(e) => this.handleTwitchClick(player, e) : 
+																						(canSpectate ? () => this.spectatePlayerID(player.id) : undefined)
+																				}
 																				onMouseEnter={() => this.setState({ hoveredPlayer: player })}
 																				onMouseLeave={() => this.setState({ hoveredPlayer: null })}
+																				title={
+																					this.hasNospecTwitch(player) ? 
+																						(this.isPlayerLive(player) ? `Watch ${this.getTwitchUsername(player)} LIVE on Twitch!` : `Visit ${this.getTwitchUsername(player)} on Twitch`) :
+																						(canSpectate ? "Click to spectate this player" : "Cannot spectate this player")
+																				}
 																			>
 																				<Q3STR s={player.n}/>
 																				{player.time > 0 && (
@@ -717,12 +762,33 @@ isGTKServer() {
 																				{this.getPlayerStatus(player).length > 0 && (
 																					<span className="status-indicator">!</span>
 																				)}
+																				
+																				{/* Twitch indicators for regular twitch.tv/ players */}
+																				{this.getTwitchUsername(player) && !this.hasNospecTwitch(player) && (
+																					<div className="twitch-info-section">
+																						<span className={`twitch-live-indicator ${this.isPlayerLive(player) ? 'live' : ''}`}>
+																							{this.isPlayerLive(player) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+																						</span>
+																						<div className="twitch-url" onClick={(e) => this.handleTwitchClick(player, e)}>
+																							twitch.tv/{this.getTwitchUsername(player)}
+																						</div>
+																					</div>
+																				)}
+																				
 																				{/* Show different indicators for different reasons */}
 																				{!canSpectate && (player.t === '3' || player.follow_num !== -1) && (
 																					<span className="spectator-indicator"> (Spectator)</span>
 																				)}
-																				{!canSpectate && player.t !== '3' && player.follow_num === -1 && (
+																				{!canSpectate && player.t !== '3' && player.follow_num === -1 && !this.hasNospecTwitch(player) && (
 																					<span className="nospec-indicator"> (No Spectating)</span>
+																				)}
+																				{this.hasNospecTwitch(player) && (
+																					<div className="nospec-twitch-section">
+																						<span className={`twitch-live-indicator ${this.isPlayerLive(player) ? 'live' : ''}`}>
+																							{this.isPlayerLive(player) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+																						</span>
+																						<span className="nospec-indicator"> (Twitch Only)</span>
+																					</div>
 																				)}
 																			</div>
 																			{!canSpectate && this.props.twitchUser.role !== 'guest' && (
@@ -747,10 +813,19 @@ isGTKServer() {
 																		<td style={{ padding: '3px 6px' }}>
 																			<div className="player-row">
 																				<div 
-																					className={`player-info ${this.canSpectatePlayer(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}
-																					onClick={this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined}
+																					className={`player-info ${this.canSpectatePlayer(spec) && !this.hasNospecTwitch(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(spec) ? 'twitch-player' : ''}`}
+																					onClick={
+																						this.hasNospecTwitch(spec) ? 
+																							(e) => this.handleTwitchClick(spec, e) : 
+																							(this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined)
+																					}
 																					onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
 																					onMouseLeave={() => this.setState({ hoveredPlayer: null })}
+																					title={
+																						this.hasNospecTwitch(spec) ? 
+																							(this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE on Twitch!` : `Visit ${this.getTwitchUsername(spec)} on Twitch`) :
+																							(this.canSpectatePlayer(spec) ? "Click to spectate this player" : "Cannot spectate this player")
+																					}
 																				>
 																					👁️ <Q3STR s={spec.n}/>
 																					{spec.time > 0 && (
@@ -758,6 +833,25 @@ isGTKServer() {
 																					)}
 																					{this.getPlayerStatus(spec).length > 0 && (
 																						<span className="status-indicator">!</span>
+																					)}
+																					{/* Twitch indicators for spectators */}
+																					{this.getTwitchUsername(spec) && !this.hasNospecTwitch(spec) && (
+																						<div className="twitch-info-section">
+																							<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
+																								{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+																							</span>
+																							<div className="twitch-url" onClick={(e) => this.handleTwitchClick(spec, e)}>
+																								twitch.tv/{this.getTwitchUsername(spec)}
+																							</div>
+																						</div>
+																					)}
+																					{this.hasNospecTwitch(spec) && (
+																						<div className="nospec-twitch-section">
+																							<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
+																								{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+																							</span>
+																							<span className="nospec-indicator"> (Twitch Only)</span>
+																						</div>
 																					)}
 																				</div>
 																				{this.state.hoveredPlayer === spec && (
@@ -814,10 +908,19 @@ isGTKServer() {
 																				<td style={{ padding: '3px 6px' }}>
 																					<div className="player-row">
 																						<div 
-																							className={`player-info ${this.canSpectatePlayer(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}
-																							onClick={this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined}
+																							className={`player-info ${this.canSpectatePlayer(spec) && !this.hasNospecTwitch(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(spec) ? 'twitch-player' : ''}`}
+																							onClick={
+																								this.hasNospecTwitch(spec) ? 
+																									(e) => this.handleTwitchClick(spec, e) : 
+																									(this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined)
+																							}
 																							onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
 																							onMouseLeave={() => this.setState({ hoveredPlayer: null })}
+																							title={
+																								this.hasNospecTwitch(spec) ? 
+																									(this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE on Twitch!` : `Visit ${this.getTwitchUsername(spec)} on Twitch`) :
+																									(this.canSpectatePlayer(spec) ? "Click to spectate this player" : "Cannot spectate this player")
+																							}
 																						>
 																							<Q3STR s={spec.n}/> 
 																							<span className="spectating-info">
@@ -828,6 +931,25 @@ isGTKServer() {
 																							</span>
 																							{this.getPlayerStatus(spec).length > 0 && (
 																								<span className="status-indicator">!</span>
+																							)}
+																							{/* Twitch indicators for free spectators */}
+																							{this.getTwitchUsername(spec) && !this.hasNospecTwitch(spec) && (
+																								<div className="twitch-info-section">
+																									<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
+																										{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+																									</span>
+																									<div className="twitch-url" onClick={(e) => this.handleTwitchClick(spec, e)}>
+																										twitch.tv/{this.getTwitchUsername(spec)}
+																									</div>
+																								</div>
+																							)}
+																							{this.hasNospecTwitch(spec) && (
+																								<div className="nospec-twitch-section">
+																									<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
+																										{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+																									</span>
+																									<span className="nospec-indicator"> (Twitch Only)</span>
+																								</div>
 																							)}
 																						</div>
 																						{this.state.hoveredPlayer === spec && (

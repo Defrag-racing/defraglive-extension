@@ -85,19 +85,24 @@ class ServerBrowserBase extends React.Component {
             return servers // No streamers to check
         }
         
-        console.log('[ServerBrowser] Found streamers (live status unavailable in extension):', Array.from(twitchUsernames))
+        console.log('[ServerBrowser] Found streamers with live status from defraglive bot:', Array.from(twitchUsernames))
         
-        // Since we can't check live status due to CSP, mark all players with Twitch usernames 
-        // as having Twitch links (but not necessarily streaming)
+        // Use live status from defraglive bot c1 field
         Object.values(servers).forEach(server => {
             const players = Object.values(server.players || {})
             players.forEach(player => {
                 const twitchUsername = this.getTwitchUsername(player)
                 if (twitchUsername) {
-                    // Set a flag to show Twitch icon/link, but not live status
+                    const isLive = this.isPlayerLive(player)
                     player.hasTwitchLink = true
-                    player.twitchUsername = twitchUsername // Make sure this is set for click handlers
-                    console.log(`[ServerBrowser] 🔗 ${player.name} has Twitch link: ${twitchUsername}`)
+                    player.twitchUsername = twitchUsername
+                    player.isStreaming = isLive
+                    
+                    if (isLive) {
+                        console.log(`[ServerBrowser] 🔴 ${player.name} is LIVE on Twitch: ${twitchUsername}`)
+                    } else {
+                        console.log(`[ServerBrowser] 🔗 ${player.name} has Twitch link: ${twitchUsername} (not live)`)
+                    }
                 }
             })
         })
@@ -341,9 +346,16 @@ class ServerBrowserBase extends React.Component {
     // Extract Twitch username from player c1 field
     getTwitchUsername(player) {
         const c1 = player.c1 || ''
-        // Match patterns like "twitch.tv/username", "tw.tv/username"
-        const twitchMatch = c1.match(/(?:twitch\.tv\/|tw\.tv\/)([\w\d_]+)/i)
+        // Match patterns like "twitch.tv/username,live", "nospec.twitch.tv/username,not"
+        const twitchMatch = c1.match(/(?:nospec\.)?(?:twitch\.tv\/|tw\.tv\/)([\w\d_]+)(?:,(?:live|not))?/i)
         return twitchMatch ? twitchMatch[1] : null
+    }
+
+    // Check if player is currently live on Twitch based on c1 field
+    isPlayerLive(player) {
+        const c1 = player.c1 || ''
+        // Check if c1 field contains ",live" suffix
+        return c1.includes(',live')
     }
 
     // Get Twitch app access token
@@ -426,10 +438,10 @@ class ServerBrowserBase extends React.Component {
         return { connectable: true, reason: null }
     }
 
-    // Handle player name clicks - redirect to Twitch if has Twitch link
+    // Handle player name clicks - redirect to Twitch if has Twitch link (prioritize live streamers)
     handlePlayerClick(player) {
         if (player.hasTwitchLink && player.twitchUsername) {
-            // Redirect to Twitch channel
+            // Redirect to Twitch channel (works for both live and offline)
             const twitchUrl = `https://www.twitch.tv/${player.twitchUsername}`
             window.open(twitchUrl, '_blank')
             return
@@ -610,7 +622,7 @@ class ServerBrowserBase extends React.Component {
                                                 {...(player.hasTwitchLink ? {
                                                     onClick: () => this.handlePlayerClick(player),
                                                     style: { cursor: 'pointer' },
-                                                    title: `Visit ${player.twitchUsername} on Twitch`
+                                                    title: player.isStreaming ? `Watch ${player.twitchUsername} LIVE on Twitch!` : `Visit ${player.twitchUsername} on Twitch`
                                                 } : {})}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''}`}>
@@ -622,7 +634,9 @@ class ServerBrowserBase extends React.Component {
                                                         <span className="status-indicator">!</span>
                                                     )}
                                                     {player.hasTwitchLink && (
-                                                        <span className="twitch-live-indicator">🟣 TWITCH</span>
+                                                        <span className={`twitch-live-indicator ${player.isStreaming ? 'live' : ''}`}>
+                                                            {player.isStreaming ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+                                                        </span>
                                                     )}
                                                 </span>
                                                 {this.state.hoveredPlayer === player && (
@@ -640,7 +654,7 @@ class ServerBrowserBase extends React.Component {
                                                     {...(spec.hasTwitchLink ? {
                                                         onClick: () => this.handlePlayerClick(spec),
                                                         style: { cursor: 'pointer' },
-                                                        title: `Visit ${spec.twitchUsername} on Twitch`
+                                                        title: spec.isStreaming ? `Watch ${spec.twitchUsername} LIVE on Twitch!` : `Visit ${spec.twitchUsername} on Twitch`
                                                     } : {})}
                                                 >
                                                     <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
@@ -649,7 +663,9 @@ class ServerBrowserBase extends React.Component {
                                                             <span className="status-indicator">!</span>
                                                         )}
                                                         {spec.hasTwitchLink && (
-                                                            <span className="twitch-live-indicator">🟣 TWITCH</span>
+                                                            <span className={`twitch-live-indicator ${spec.isStreaming ? 'live' : ''}`}>
+                                                                {spec.isStreaming ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+                                                            </span>
                                                         )}
                                                     </span>
                                                     {this.state.hoveredPlayer === spec && (
@@ -673,7 +689,7 @@ class ServerBrowserBase extends React.Component {
                                                 {...(spec.hasTwitchLink ? {
                                                     onClick: () => this.handlePlayerClick(spec),
                                                     style: { cursor: 'pointer' },
-                                                    title: `Visit ${spec.twitchUsername} on Twitch`
+                                                    title: spec.isStreaming ? `Watch ${spec.twitchUsername} LIVE on Twitch!` : `Visit ${spec.twitchUsername} on Twitch`
                                                 } : {})}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
@@ -682,7 +698,9 @@ class ServerBrowserBase extends React.Component {
                                                         <span className="status-indicator">!</span>
                                                     )}
                                                     {spec.hasTwitchLink && (
-                                                        <span className="twitch-live-indicator">🟣 TWITCH</span>
+                                                        <span className={`twitch-live-indicator ${spec.isStreaming ? 'live' : ''}`}>
+                                                            {spec.isStreaming ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
+                                                        </span>
                                                     )}
                                                 </span>
                                                 {this.state.hoveredPlayer === spec && (
