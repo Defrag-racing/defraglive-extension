@@ -73,6 +73,45 @@ class ServerBrowserBase extends React.Component {
 		
         this.setState({ loading: true, error: null })        
         try {
+            // First get the current server info from tw.defrag.racing to get actual player data
+            let currentServerData = null
+            let currentServerAddress = null
+            
+            try {
+                const serverstateResponse = await fetch('https://tw.defrag.racing/serverstate.json')
+                const serverstate = await serverstateResponse.json()
+                
+                if (serverstate.ip) {
+                    currentServerData = {
+                        map: serverstate.mapname,
+                        hostname: serverstate.hostname,
+                        defrag: serverstate.df_promode === '1' ? 'cpm' : 'vq3',
+                        address: serverstate.ip,
+                        timestamp: new Date().toISOString(),
+                        players: {},
+                        scores: { players: [], num_players: Object.keys(serverstate.players || {}).length }
+                    }
+                    currentServerAddress = serverstate.ip
+                    
+                    // Convert serverstate players to the expected format
+                    Object.values(serverstate.players || {}).forEach((player, index) => {
+                        currentServerData.players[player.id || index + 1] = {
+                            clientId: parseInt(player.id) || index + 1,
+                            name: player.n,
+                            logged: false,
+                            mddId: 0,
+                            country: player.country || 'Unknown',
+                            nospec: parseInt(player.nospec) || 0,
+                            model: player.model || 'sarge',
+                            headmodel: player.hmodel || 'sarge'
+                        }
+                    })
+                }
+            } catch (error) {
+                console.warn('Could not fetch current server data from tw.defrag.racing:', error)
+            }
+            
+            // Then get the servers list from defrag.racing
             const response = await fetch('https://defrag.racing/servers/json')
 			
             if (!response.ok) {
@@ -80,7 +119,80 @@ class ServerBrowserBase extends React.Component {
             }
             
             const data = await response.json()
-			const activeServers = data.active || {}
+			let activeServers = data.active || {}
+			
+			// If we have current server data and it matches a server in the list, enrich it
+			if (currentServerData && currentServerAddress && activeServers[currentServerAddress]) {
+			    const serverFromAPI = activeServers[currentServerAddress]
+			    
+			    // Check if all players from serverstate match players in the API (with partial matching for truncated names)
+			    const serverstatePlayerNames = Object.values(currentServerData.players).map(p => 
+			        p.name.replace(/\^./g, '').toLowerCase().trim()
+			    )
+			    const apiPlayerNames = Object.values(serverFromAPI.players || {}).map(p => 
+			        p.name.replace(/\^./g, '').toLowerCase().trim()
+			    )
+			    
+			    // Helper function to check if two names match (exact or partial for truncated names)
+			    const namesMatch = (name1, name2) => {
+			        if (name1 === name2) return true
+			        // Check if one is a truncation of the other (at least 8 chars to avoid false positives)
+			        if (name1.length >= 8 && name2.length >= 8) {
+			            // Handle truncated names ending with "..." or more dots
+			            const cleanName1 = name1.replace(/\.{3,}$/, '')
+			            const cleanName2 = name2.replace(/\.{3,}$/, '')
+			            
+			            return name1.startsWith(name2) || name2.startsWith(name1) ||
+			                   name1.startsWith(cleanName2) || cleanName1.startsWith(name2) ||
+			                   cleanName1.startsWith(cleanName2) || cleanName2.startsWith(cleanName1)
+			        }
+			        return false
+			    }
+			    
+			    // Check if each serverstate player has a match in API
+			    const allServerstatePlayersMatch = serverstatePlayerNames.every(serverstatePlayer => 
+			        apiPlayerNames.some(apiPlayer => namesMatch(serverstatePlayer, apiPlayer))
+			    )
+			    
+			    // Check if each API player has a match in serverstate
+			    const allApiPlayersMatch = apiPlayerNames.every(apiPlayer => 
+			        serverstatePlayerNames.some(serverstatePlayer => namesMatch(apiPlayer, serverstatePlayer))
+			    )
+			    
+			    // Check for duplicate partial matches (ambiguous cases)
+			    let hasDuplicateMatches = false
+			    for (const serverstatePlayer of serverstatePlayerNames) {
+			        const matches = apiPlayerNames.filter(apiPlayer => namesMatch(serverstatePlayer, apiPlayer))
+			        if (matches.length > 1) {
+			            hasDuplicateMatches = true
+			            break
+			        }
+			    }
+			    
+			    const allPlayersMatch = allServerstatePlayersMatch && allApiPlayersMatch && !hasDuplicateMatches
+			    
+			    console.log('[ServerBrowser] Matching debug:')
+			    console.log('  Serverstate players:', serverstatePlayerNames)
+			    console.log('  API players:', apiPlayerNames)
+			    console.log('  allServerstatePlayersMatch:', allServerstatePlayersMatch)
+			    console.log('  allApiPlayersMatch:', allApiPlayersMatch) 
+			    console.log('  hasDuplicateMatches:', hasDuplicateMatches)
+			    console.log('  allPlayersMatch:', allPlayersMatch)
+			    
+			    if (allPlayersMatch) {
+			        // Use enriched data from API since all players match
+			        console.log('[ServerBrowser] ✅ All players match - using enriched API data')
+			    } else {
+			        // Use serverstate data since it has more complete player list
+			        console.log('[ServerBrowser] ❌ Player lists differ - using serverstate data')
+			        activeServers[currentServerAddress] = currentServerData
+			    }
+			} else if (currentServerData && currentServerAddress && !activeServers[currentServerAddress]) {
+			    // Current server not in API list - add it with serverstate data
+			    console.log('[ServerBrowser] Current server not in API - adding serverstate data')
+			    activeServers[currentServerAddress] = currentServerData
+			}
+			
 			const serverCount = Object.keys(activeServers).length
 			
             this.setState({ 
@@ -414,9 +526,6 @@ class ServerBrowserBase extends React.Component {
                                             </div>
                                         ))}
                                     </div>
-                                )}
-                                {playerCount > 5 && (
-                                    <div className="more-players">and {playerCount - 5} more...</div>
                                 )}
                             </div>
                         )}
