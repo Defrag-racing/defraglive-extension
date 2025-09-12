@@ -66,6 +66,54 @@ class ServerBrowserBase extends React.Component {
 		this.props.toggleServerBrowser()
 	}
 
+    // Update streaming status for all players with Twitch usernames
+    async updateStreamingStatus(servers) {
+        // Collect all unique Twitch usernames from all servers
+        const twitchUsernames = new Set()
+        
+        Object.values(servers).forEach(server => {
+            const players = this.getPlayerWithScores(server)
+            players.forEach(player => {
+                if (player.twitchUsername) {
+                    twitchUsernames.add(player.twitchUsername)
+                }
+            })
+        })
+        
+        if (twitchUsernames.size === 0) {
+            return servers // No streamers to check
+        }
+        
+        console.log('[ServerBrowser] Checking live status for streamers:', Array.from(twitchUsernames))
+        
+        // Check live status for all streamers in parallel
+        const streamingStatuses = {}
+        await Promise.all(
+            Array.from(twitchUsernames).map(async (username) => {
+                streamingStatuses[username] = await this.checkTwitchLiveStatus(username)
+            })
+        )
+        
+        console.log('[ServerBrowser] Streaming statuses:', streamingStatuses)
+        
+        // Update players' streaming status in all servers
+        Object.values(servers).forEach(server => {
+            const players = Object.values(server.players || {})
+            players.forEach(player => {
+                const twitchUsername = this.getTwitchUsername(player)
+                if (twitchUsername) {
+                    const isLive = streamingStatuses[twitchUsername] || false
+                    player.isStreaming = isLive
+                    if (isLive) {
+                        console.log(`[ServerBrowser] 🔴 ${player.name} is LIVE on Twitch!`)
+                    }
+                }
+            })
+        })
+        
+        return servers
+    }
+
     async fetchServers() {		
 		if (this.state.loading) {
 			return;
@@ -187,8 +235,11 @@ class ServerBrowserBase extends React.Component {
 			
 			const serverCount = Object.keys(activeServers).length
 			
+			// Update streaming status for players with Twitch usernames
+			const serversWithStreamingStatus = await this.updateStreamingStatus(activeServers)
+			
             this.setState({ 
-                servers: activeServers,
+                servers: serversWithStreamingStatus,
                 loading: false 
             })
 		
@@ -257,17 +308,104 @@ class ServerBrowserBase extends React.Component {
         return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${milliseconds.toString().padStart(3, '0')}`
     }
 
+    // Extract Twitch username from player c1 field
+    getTwitchUsername(player) {
+        const c1 = player.c1 || ''
+        // Match patterns like "twitch.tv/username", "tw.tv/username"
+        const twitchMatch = c1.match(/(?:twitch\.tv\/|tw\.tv\/)([\w\d_]+)/i)
+        return twitchMatch ? twitchMatch[1] : null
+    }
+
+    // Get Twitch app access token
+    async getTwitchAccessToken() {
+        // Check if we already have a cached token
+        if (this.twitchAccessToken && this.twitchTokenExpiry > Date.now()) {
+            return this.twitchAccessToken
+        }
+        
+        try {
+            const CLIENT_ID = 'u8qaeps5664v7ddm7hgh42d9ynkanr'
+            const CLIENT_SECRET = 'mp8m7yb3nsgq9c7j2ifwnfcufac4c4'
+            
+            const response = await fetch('https://id.twitch.tv/oauth2/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&grant_type=client_credentials`
+            })
+            
+            if (!response.ok) {
+                throw new Error(`Token request failed: ${response.status}`)
+            }
+            
+            const data = await response.json()
+            
+            // Cache the token
+            this.twitchAccessToken = data.access_token
+            this.twitchTokenExpiry = Date.now() + (data.expires_in * 1000) - 60000 // 1 minute buffer
+            
+            console.log('[ServerBrowser] Got new Twitch access token')
+            return this.twitchAccessToken
+            
+        } catch (error) {
+            console.error('[ServerBrowser] Failed to get Twitch access token:', error)
+            return null
+        }
+    }
+
+    // Check if Twitch channel is currently live
+    async checkTwitchLiveStatus(username) {
+        try {
+            const TWITCH_CLIENT_ID = 'u8qaeps5664v7ddm7hgh42d9ynkanr'
+            // Get app access token (cached, auto-renewed when expired)
+            let TWITCH_ACCESS_TOKEN = await this.getTwitchAccessToken()
+            
+            if (!TWITCH_ACCESS_TOKEN) {
+                console.warn('[ServerBrowser] No Twitch access token available')
+                return false
+            }
+            
+            const response = await fetch(`https://api.twitch.tv/helix/streams?user_login=${username}`, {
+                headers: {
+                    'Client-ID': TWITCH_CLIENT_ID,
+                    'Authorization': `Bearer ${TWITCH_ACCESS_TOKEN}`
+                }
+            })
+            
+            if (!response.ok) {
+                console.warn(`[ServerBrowser] Twitch API error for ${username}:`, response.status)
+                return false
+            }
+            
+            const data = await response.json()
+            return data.data && data.data.length > 0
+            
+        } catch (error) {
+            console.warn(`[ServerBrowser] Error checking Twitch status for ${username}:`, error)
+            return false
+        }
+    }
+
     getPlayerWithScores(server) {
         const players = Object.values(server.players || {})
         const scores = server.scores?.players || []
         
         return players.map(player => {
             const scoreData = scores.find(score => score.player_num === player.clientId)
+            const twitchUsername = this.getTwitchUsername(player)
+            
+            if (twitchUsername) {
+                console.log(`[ServerBrowser] Found Twitch username for ${player.name}: ${twitchUsername}`)
+            }
+            
             return {
                 ...player,
                 time: scoreData?.time || 0,
                 follow_num: scoreData?.follow_num || -1,
-                team: scoreData?.follow_num === -1 ? '0' : '3'
+                team: scoreData?.follow_num === -1 ? '0' : '3',
+                twitchUsername: twitchUsername,
+                isStreaming: player.isStreaming || false // Preserve existing streaming status
             }
         })
     }
@@ -291,6 +429,17 @@ class ServerBrowserBase extends React.Component {
         }
 
         return { connectable: true, reason: null }
+    }
+
+    // Handle player name clicks - only redirect to Twitch if streaming
+    handlePlayerClick(player) {
+        if (player.twitchUsername && player.isStreaming) {
+            // Redirect to Twitch stream
+            const twitchUrl = `https://www.twitch.tv/${player.twitchUsername}`
+            window.open(twitchUrl, '_blank')
+            return
+        }
+        // No default behavior - players can't be clicked for connection anymore
     }
 
     connectToServer(address, server) {
@@ -382,12 +531,20 @@ class ServerBrowserBase extends React.Component {
             <tr key={address} className={`${playerCount > 0 ? 'has-players' : 'empty'} ${!connectable ? 'not-connectable' : ''}`}>
 				<td style={{ width: '42%' }}>
 					<div className="server-info">
-						<div className="server-name-row">
-							<div 
-								className={`server-name ${connectable ? 'link' : 'disabled-link'}`}
+						<div className="server-header">
+							<button 
+								className={`connect-to-server-btn ${connectable ? 'connectable' : 'disabled'}`}
 								onClick={() => connectable && this.connectToServer(address, server)}
-								title={`Connect to ${address}`}
+								disabled={!connectable}
+								title={connectable ? `Connect to ${address}` : `Cannot connect: ${reason}`}
 							>
+								<span className="connect-icon">🎮</span>
+								<span className="connect-text">CONNECT TO SERVER</span>
+								<div className="connect-btn-ripple"></div>
+							</button>
+						</div>
+						<div className="server-name-row">
+							<div className="server-name">
 								<Q3STR s={server.hostname}/>
 							</div>
 						</div>
@@ -453,9 +610,14 @@ class ServerBrowserBase extends React.Component {
                                     return (
                                         <div key={player.clientId} className="player-group">
                                             <div 
-                                                className="player-name-container"
+                                                className={`player-name-container ${player.twitchUsername && player.isStreaming ? 'twitch-streamer' : ''}`}
                                                 onMouseEnter={() => this.setState({ hoveredPlayer: player })}
                                                 onMouseLeave={() => this.setState({ hoveredPlayer: null })}
+                                                {...(player.twitchUsername && player.isStreaming ? {
+                                                    onClick: () => this.handlePlayerClick(player),
+                                                    style: { cursor: 'pointer' },
+                                                    title: `Watch ${player.twitchUsername} on Twitch`
+                                                } : {})}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''}`}>
                                                     <Q3STR s={player.name}/>
@@ -464,6 +626,9 @@ class ServerBrowserBase extends React.Component {
                                                     )}
                                                     {this.getPlayerStatus(player).length > 0 && (
                                                         <span className="status-indicator">!</span>
+                                                    )}
+                                                    {player.twitchUsername && player.isStreaming && (
+                                                        <span className="twitch-live-indicator">🔴 LIVE</span>
                                                     )}
                                                 </span>
                                                 {this.state.hoveredPlayer === player && (
@@ -475,14 +640,22 @@ class ServerBrowserBase extends React.Component {
                                             {followingSpecs.map((spec) => (
                                                 <div 
                                                     key={spec.clientId} 
-                                                    className="player-name-container spectator"
+                                                    className={`player-name-container spectator ${spec.twitchUsername && spec.isStreaming ? 'twitch-streamer' : ''}`}
                                                     onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
                                                     onMouseLeave={() => this.setState({ hoveredPlayer: null })}
+                                                    {...(spec.twitchUsername && spec.isStreaming ? {
+                                                        onClick: () => this.handlePlayerClick(spec),
+                                                        style: { cursor: 'pointer' },
+                                                        title: `Watch ${spec.twitchUsername} on Twitch`
+                                                    } : {})}
                                                 >
                                                     <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
                                                         👁️ <Q3STR s={spec.name}/>
                                                         {this.getPlayerStatus(spec).length > 0 && (
                                                             <span className="status-indicator">!</span>
+                                                        )}
+                                                        {spec.twitchUsername && spec.isStreaming && (
+                                                            <span className="twitch-live-indicator">🔴 LIVE</span>
                                                         )}
                                                     </span>
                                                     {this.state.hoveredPlayer === spec && (
@@ -500,14 +673,22 @@ class ServerBrowserBase extends React.Component {
                                         {freeSpectators.map((spec) => (
                                             <div 
                                                 key={spec.clientId} 
-                                                className="player-name-container"
+                                                className={`player-name-container ${spec.twitchUsername && spec.isStreaming ? 'twitch-streamer' : ''}`}
                                                 onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
                                                 onMouseLeave={() => this.setState({ hoveredPlayer: null })}
+                                                {...(spec.twitchUsername && spec.isStreaming ? {
+                                                    onClick: () => this.handlePlayerClick(spec),
+                                                    style: { cursor: 'pointer' },
+                                                    title: `Watch ${spec.twitchUsername} on Twitch`
+                                                } : {})}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
                                                     <Q3STR s={spec.name}/>
                                                     {this.getPlayerStatus(spec).length > 0 && (
                                                         <span className="status-indicator">!</span>
+                                                    )}
+                                                    {spec.twitchUsername && spec.isStreaming && (
+                                                        <span className="twitch-live-indicator">🔴 LIVE</span>
                                                     )}
                                                 </span>
                                                 {this.state.hoveredPlayer === spec && (
