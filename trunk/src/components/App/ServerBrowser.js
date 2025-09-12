@@ -143,6 +143,13 @@ class ServerBrowserBase extends React.Component {
                     
                     // Convert serverstate players to the expected format
                     Object.values(serverstate.players || {}).forEach((player, index) => {
+                        console.log(`[ServerBrowser] Converting serverstate player:`, {
+                            name: player.n,
+                            id: player.id,
+                            c1: player.c1,
+                            allFields: Object.keys(player)
+                        })
+                        
                         currentServerData.players[player.id || index + 1] = {
                             clientId: parseInt(player.id) || index + 1,
                             name: player.n,
@@ -151,7 +158,8 @@ class ServerBrowserBase extends React.Component {
                             country: player.country || 'Unknown',
                             nospec: parseInt(player.nospec) || 0,
                             model: player.model || 'sarge',
-                            headmodel: player.hmodel || 'sarge'
+                            headmodel: player.hmodel || 'sarge',
+                            c1: player.c1 || '' // Make sure c1 field is preserved
                         }
                     })
                 }
@@ -311,8 +319,12 @@ class ServerBrowserBase extends React.Component {
     // Extract Twitch username from player c1 field
     getTwitchUsername(player) {
         const c1 = player.c1 || ''
+        console.log(`[ServerBrowser] Player ${player.name} - c1 field:`, c1)
         // Match patterns like "twitch.tv/username", "tw.tv/username"
         const twitchMatch = c1.match(/(?:twitch\.tv\/|tw\.tv\/)([\w\d_]+)/i)
+        if (twitchMatch) {
+            console.log(`[ServerBrowser] Found Twitch username for ${player.name}:`, twitchMatch[1])
+        }
         return twitchMatch ? twitchMatch[1] : null
     }
 
@@ -390,6 +402,16 @@ class ServerBrowserBase extends React.Component {
     getPlayerWithScores(server) {
         const players = Object.values(server.players || {})
         const scores = server.scores?.players || []
+        
+        console.log(`[ServerBrowser] Processing ${players.length} players for server:`, server.hostname)
+        players.forEach(player => {
+            console.log(`[ServerBrowser] Player data:`, {
+                name: player.name,
+                clientId: player.clientId,
+                c1: player.c1,
+                hasAllFields: Object.keys(player)
+            })
+        })
         
         return players.map(player => {
             const scoreData = scores.find(score => score.player_num === player.clientId)
