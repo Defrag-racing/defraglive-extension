@@ -50,11 +50,23 @@ class ServerBrowserBase extends React.Component {
         this.fetchServers = this.fetchServers.bind(this)
         this.refreshServers = this.refreshServers.bind(this)
         this.copyToClipboard = this.copyToClipboard.bind(this)
+        this.handleEscKey = this.handleEscKey.bind(this)
+    }
+
+    handleEscKey(event) {
+        if (event.key === 'Escape' && this.props.appstate.isServerBrowserOpen) {
+            event.preventDefault()
+            event.stopPropagation()
+            this.props.toggleServerBrowser()
+        }
     }
 
 	componentDidMount() {
 		this.fetchServers()
-		
+
+        // Add ESC key listener
+        document.addEventListener('keydown', this.handleEscKey)
+
 		// Add periodic refresh every 30 seconds when server browser is open
 		this.refreshInterval = setInterval(() => {
 			if (this.props.appstate.isServerBrowserOpen) {
@@ -64,6 +76,9 @@ class ServerBrowserBase extends React.Component {
 	}
 
 	componentWillUnmount() {
+        // Remove ESC key listener
+        document.removeEventListener('keydown', this.handleEscKey)
+
 		if (this.refreshInterval) {
 			clearInterval(this.refreshInterval)
 		}
@@ -97,7 +112,6 @@ class ServerBrowserBase extends React.Component {
             return servers // No streamers to check
         }
         
-        console.log('[ServerBrowser] Found streamers with live status from defraglive bot:', Array.from(twitchUsernames))
         
         // Use live status from defraglive bot c1 field
         Object.values(servers).forEach(server => {
@@ -111,9 +125,7 @@ class ServerBrowserBase extends React.Component {
                     player.isStreaming = isLive
                     
                     if (isLive) {
-                        console.log(`[ServerBrowser] 🔴 ${player.name} is LIVE on Twitch: ${twitchUsername}`)
                     } else {
-                        console.log(`[ServerBrowser] 🔗 ${player.name} has Twitch link: ${twitchUsername} (not live)`)
                     }
                 }
             })
@@ -151,12 +163,6 @@ class ServerBrowserBase extends React.Component {
                     
                     // Convert serverstate players to the expected format
                     Object.values(serverstate.players || {}).forEach((player, index) => {
-                        console.log(`[ServerBrowser] Converting serverstate player:`, {
-                            name: player.n,
-                            id: player.id,
-                            c1: player.c1,
-                            allFields: Object.keys(player)
-                        })
                         
                         currentServerData.players[player.id || index + 1] = {
                             clientId: parseInt(player.id) || index + 1,
@@ -234,10 +240,12 @@ class ServerBrowserBase extends React.Component {
 			    }
 			    
 			    const allPlayersMatch = allServerstatePlayersMatch && allApiPlayersMatch && !hasDuplicateMatches
-			    
-			    if (allPlayersMatch) {
+
+			    // Special handling for GTK servers - always use API data since name matching is more reliable than clientId
+			    const isGTKCurrentServer = currentServerAddress?.includes('83.243.73.220')
+
+			    if (allPlayersMatch || isGTKCurrentServer) {
 			        // Use enriched data from API since all players match, but preserve c1 fields from serverstate
-			        console.log('[ServerBrowser] All players match - using enriched API data with c1 fields preserved')
 			        
 			        // Merge c1 fields from serverstate into API data
 			        const enrichedServer = { ...serverFromAPI }
@@ -262,13 +270,11 @@ class ServerBrowserBase extends React.Component {
 			        activeServers[currentServerAddress] = enrichedServer
 			    } else {
 			        // Use serverstate data since it has more complete player list
-			        console.log('[ServerBrowser] Player lists differ - using serverstate data')
-			        activeServers[currentServerAddress] = currentServerData
+				        activeServers[currentServerAddress] = currentServerData
 			    }
 			} else if (currentServerData && currentServerAddress && !activeServers[currentServerAddress]) {
 			    // Current server not in API list - add it with serverstate data
-			    console.log('[ServerBrowser] Current server not in API - adding serverstate data')
-			    activeServers[currentServerAddress] = currentServerData
+				    activeServers[currentServerAddress] = currentServerData
 			}
 			
 			const serverCount = Object.keys(activeServers).length
@@ -278,8 +284,6 @@ class ServerBrowserBase extends React.Component {
 			    this.getPlayerWithScores(server).filter(p => this.getTwitchUsername(p))
 			)
 			if (playersWithTwitch.length > 0) {
-			    console.log('[ServerBrowser] Found players with Twitch:', 
-			        playersWithTwitch.map(p => `${p.name} -> ${this.getTwitchUsername(p)}`))
 			}
 			
 			// Update streaming status for players with Twitch usernames
@@ -299,7 +303,18 @@ class ServerBrowserBase extends React.Component {
     }
 
     refreshServers() {
-        this.fetchServers()
+        // Store current scroll position before refresh
+        const scrollContainer = document.querySelector('.serverbrowser-content')
+        const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0
+
+        this.fetchServers().then(() => {
+            // Restore scroll position after refresh completes
+            if (scrollContainer) {
+                setTimeout(() => {
+                    scrollContainer.scrollTop = scrollTop
+                }, 50)
+            }
+        })
     }
 
     copyToClipboard(text) {
@@ -404,7 +419,6 @@ class ServerBrowserBase extends React.Component {
     async getTwitchAccessToken() {
         // Twitch extensions have strict CSP that blocks OAuth token requests to id.twitch.tv
         // For now, we'll disable live status checking and focus on showing Twitch links
-        console.log('[ServerBrowser] Twitch live status checking disabled: CSP blocks OAuth requests in extension environment')
         return null
     }
 
@@ -441,22 +455,72 @@ class ServerBrowserBase extends React.Component {
         }
     }
 
+    // Check if server is GTK (unreliable ID matching)
+    isGTKServer(server) {
+        const serverIP = server.address
+        return serverIP?.includes('83.243.73.220')
+    }
+
+    // Helper function to strip Quake 3 color codes
+    stripQuakeColors(text) {
+        if (!text) return ''
+        return text.replace(/\^./g, '').toLowerCase().trim()
+    }
+
     getPlayerWithScores(server) {
         const players = Object.values(server.players || {})
         const scores = server.scores?.players || []
-        
-        return players.map(player => {
-            const scoreData = scores.find(score => score.player_num === player.clientId)
-            const twitchUsername = this.getTwitchUsername(player)
-            
-            return {
-                ...player,
-                time: scoreData?.time || 0,
-                follow_num: scoreData?.follow_num || -1,
-                team: scoreData?.follow_num === -1 ? '0' : '3',
-                twitchUsername: twitchUsername
-            }
-        })
+        const isGTK = this.isGTKServer(server)
+
+
+        if (isGTK) {
+            // GTK SERVER SPECIAL HANDLING - match players with scores by name
+            return players.map(player => {
+                const cleanPlayerName = this.stripQuakeColors(player.name)
+                const twitchUsername = this.getTwitchUsername(player)
+
+                // Find spectator data from scores by matching names (GTK has unreliable clientId)
+                const scoreData = scores.find(score => {
+                    // For GTK, we need to match the score with a player by finding the corresponding
+                    // player entry and comparing names, since clientId is unreliable
+                    const scorePlayerData = Object.values(server.players || {}).find(p =>
+                        p.clientId === score.player_num
+                    )
+                    if (scorePlayerData) {
+                        const cleanScorePlayerName = this.stripQuakeColors(scorePlayerData.name)
+                        return cleanScorePlayerName === cleanPlayerName
+                    }
+                    return false
+                })
+
+
+                return {
+                    ...player,
+                    time: scoreData?.time || 0,
+                    follow_num: scoreData?.follow_num || -1,
+                    team: scoreData?.follow_num === -1 ? '0' : '3',
+                    twitchUsername: twitchUsername,
+                    clientId: scoreData?.player_num || player.clientId,
+                    dataSource: scoreData ? 'gtk-matched' : 'gtk-no-score'
+                }
+            })
+        } else {
+            // NON-GTK SERVER - use normal clientId matching
+            return players.map(player => {
+                const scoreData = scores.find(score => score.player_num === player.clientId)
+                const twitchUsername = this.getTwitchUsername(player)
+
+
+                return {
+                    ...player,
+                    time: scoreData?.time || 0,
+                    follow_num: scoreData?.follow_num || -1,
+                    team: scoreData?.follow_num === -1 ? '0' : '3',
+                    twitchUsername: twitchUsername,
+                    dataSource: scoreData ? 'matched' : 'serverstate-only'
+                }
+            })
+        }
     }
 
     isServerConnectable(server) {
@@ -581,14 +645,13 @@ class ServerBrowserBase extends React.Component {
 				<td style={{ width: '42%' }}>
 					<div className="server-info">
 						<div className="server-header">
-							<button 
-								className={`connect-to-server-btn ${connectable ? 'connectable' : 'disabled'}`}
+							<button
+								className={`compact-spectate-btn ${connectable ? '' : 'disabled'}`}
 								onClick={() => connectable && this.connectToServer(address, server)}
 								disabled={!connectable}
 								title={connectable ? `Connect to ${address}` : `Cannot connect: ${reason}`}
 							>
-								<span className="connect-text">CONNECT</span>
-								<div className="connect-btn-ripple"></div>
+								{connectable ? 'CONNECT' : 'Cannot Connect'}
 							</button>
 						</div>
 						<div className="server-name-row">
@@ -599,38 +662,32 @@ class ServerBrowserBase extends React.Component {
 						
 						<div className="server-details">
 							<div className="detail-row">
-								<span>Copy IP:</span>
-								<button 
-									className={`copy-button-small ${this.state.copySuccess === address ? 'copied' : ''}`}
-									onClick={() => this.copyToClipboard(address)}
-									title={`Copy IP address: ${address}`}
-								>
-									<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-										<path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-									</svg>
-								</button>
-							</div>
-							
-							<div className="detail-row">
 								<span className="server-map">
-									Map: <a 
-										href={`https://defrag.racing/maps/${server.map}`} 
-										target="_blank" 
+									Map: <a
+										href={`https://defrag.racing/maps/${server.map}`}
+										target="_blank"
 										rel="noopener noreferrer"
 										onClick={(e) => e.stopPropagation()}
 									>
 										<Q3STR s={server.map}/>
 									</a>
 								</span>
-                                <button 
-                                    className={`copy-button-small ${this.state.copySuccess === server.map ? 'copied' : ''}`}
-                                    onClick={() => this.copyToClipboard(server.map)}
-                                    title="Copy map name"
-                                >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                                    </svg>
-                                </button>
+								<div className="copy-buttons">
+									<button
+										className={`copy-btn ${this.state.copySuccess === address ? 'copied' : ''}`}
+										onClick={() => this.copyToClipboard(address)}
+										title={`Copy IP: ${address}`}
+									>
+										📋 Copy IP
+									</button>
+									<button
+										className={`copy-btn ${this.state.copySuccess === server.map ? 'copied' : ''}`}
+										onClick={() => this.copyToClipboard(server.map)}
+										title="Copy map name"
+									>
+										📋 Copy MAP
+									</button>
+								</div>
                             </div>
                             
                             <div className="detail-row">
@@ -780,6 +837,131 @@ class ServerBrowserBase extends React.Component {
         )
     }
 
+    renderServerCard(address, server) {
+        const playersWithScores = this.getPlayerWithScores(server)
+        const playerCount = playersWithScores.length
+        const { connectable, reason } = this.isServerConnectable(server)
+
+        // Separate active players and spectators
+        const activePlayers = playersWithScores.filter(player => player.follow_num === -1)
+        const allSpectators = playersWithScores.filter(player => player.follow_num !== -1)
+
+        return (
+            <div key={address} className="server-card">
+                {/* Server Name Row with Play and Connect buttons */}
+                <div className="server-name-row">
+                    <span className="server-name">
+                        <Q3STR s={server.hostname}/>
+                    </span>
+                    <div className="server-action-buttons">
+                        <button
+                            className="play-btn"
+                            onClick={() => {
+                                try {
+                                    window.open(`defrag://${address}`, '_blank')
+                                } catch (e) {
+                                    window.location.href = `defrag://${address}`
+                                }
+                            }}
+                            title={`Play on server: ${address}`}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/>
+                            </svg>
+                            Play
+                        </button>
+                        <button
+                            className={`compact-spectate-btn ${connectable ? '' : 'disabled'}`}
+                            onClick={() => connectable && this.connectToServer(address, server)}
+                            disabled={!connectable}
+                            title={connectable ? `Connect to ${address}` : `Cannot connect: ${reason}`}
+                        >
+                            {connectable ? 'Connect' : 'Cannot Connect'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Map Name Row with Copy buttons */}
+                <div className="map-name-row">
+                    <span className="map-info">
+                        Map: <a
+                            href={`https://defrag.racing/maps/${server.map}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <Q3STR s={server.map}/>
+                        </a>
+                    </span>
+                    <div className="copy-buttons">
+                        <button
+                            className={`copy-btn ${this.state.copySuccess === server.map ? 'copied' : ''}`}
+                            onClick={() => this.copyToClipboard(server.map)}
+                            title="Copy map name"
+                        >
+                            📋 Copy MAP
+                        </button>
+                        <button
+                            className={`copy-btn ${this.state.copySuccess === address ? 'copied' : ''}`}
+                            onClick={() => this.copyToClipboard(address)}
+                            title={`Copy IP: ${address}`}
+                        >
+                            📋 Copy IP
+                        </button>
+                    </div>
+                </div>
+
+                {/* Physics and Player Count Row */}
+                <div className="server-info-row">
+                    <span className="server-physics">{this.parsePhysicsType(server.defrag) || 'Unknown'}</span>
+                    <span className="player-count">Players: {playerCount}</span>
+                </div>
+
+                {/* Warning for non-connectable servers */}
+                {!connectable && (
+                    <div className="server-warning">
+                        ⚠️ {reason}
+                    </div>
+                )}
+
+                {/* Small gap */}
+                <div className="server-gap"></div>
+
+                {/* Player List */}
+                {playerCount > 0 && (
+                    <div className="server-players">
+                        <div className="players-list">
+                            {activePlayers.map((player) => {
+                                const followingSpecs = allSpectators.filter(spec =>
+                                    spec.follow_num === player.clientId
+                                )
+                                return (
+                                    <div key={player.clientId} className="player-group">
+                                        <div className="player-item">
+                                            <span className="player-name">
+                                                <Q3STR s={player.name}/>
+                                                {player.time > 0 && (
+                                                    <span className="player-time"> ({this.formatTime(player.time)})</span>
+                                                )}
+                                            </span>
+                                        </div>
+                                        {followingSpecs.map((spec) => (
+                                            <div key={spec.clientId} className="player-item spectator">
+                                                <span className="player-name">
+                                                    👁️ <Q3STR s={spec.name}/>
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
     render() {
         let svgServers = <svg className="serverbrowser-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" title="Toggle Server Browser"><path d="M0 2C0 .9.9 0 2 0h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm0 6C0 6.9.9 6 2 6h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V8zm0 6C0 12.9.9 12 2 12h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2zM5 2v2h2V2H5zm0 6v2h2V8H5zm0 6v2h2v-2H5z"/></svg>
         let svgClose = <svg className="serverbrowser-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Server Browser"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.31a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
@@ -791,75 +973,53 @@ class ServerBrowserBase extends React.Component {
                 </div>
                 <div className="serverbrowser-content-wrap">
                     <div className="serverbrowser-content">
-                        <div className="header-top">
-                            <div className="h1">Server Browser</div>
+                        <div className="compact-header">
 							<div className="header-controls">
-								<div className="refresh-button" onClick={() => {
-									this.refreshServers()
-								}} title="Refresh Server List" style={{ transform: 'scale(1.6)' }}>
-									<svg className="refresh-svg animated-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ 
-										transition: 'transform 0.3s ease',
-										animation: this.state.loading ? 'spin 1s linear infinite' : 'none'
-									}}>
-										<path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-									</svg>
-								</div>
-								<div className="close" onClick={this.toggle} title="Close Server Browser" style={{ transform: 'scale(1.3)' }}>
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
-								</div>
+								<button
+									className="compact-header-btn refresh-btn"
+									onClick={() => this.refreshServers()}
+									title="Refresh Server List"
+								>
+									Refresh
+								</button>
+								<button
+									className="compact-header-btn close-btn"
+									onClick={this.toggle}
+									title="Close Server Browser"
+								>
+									✕
+								</button>
 							</div>
                         </div>
                         
-                        <div className="twitch-explanation">
-                            <div className="explanation-title">🟣 Twitch Integration</div>
-                            <div className="explanation-content">
-                                <span><strong>🔴 CURRENTLY LIVE</strong> - Player is streaming live on Twitch</span>
-                                <span><strong>🟣 TWITCH</strong> - Player has Twitch account (offline)</span>
-                                <span>Click any player name with Twitch indicators to open their stream</span>
-                            </div>
-                        </div>
                         
                         <div className="section">
-                            <div className="content" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
-                                {this.state.loading && (
-                                    <div className="loading-message">Loading servers...</div>
-                                )}
+                            <div className="content">
                                 {this.state.error && (
                                     <div className="error-message">
                                         {this.state.error}
                                         <button className="retry-button" onClick={this.refreshServers} title="Retry Loading Servers">Retry</button>
                                     </div>
                                 )}
-                                {!this.state.loading && !this.state.error && Object.keys(this.state.servers).length === 0 && (
+                                {!this.state.error && Object.keys(this.state.servers).length === 0 && !this.state.loading && (
                                     <div className="no-servers">No servers available</div>
                                 )}
-                                {!this.state.loading && !this.state.error && Object.keys(this.state.servers).length > 0 && (
-                                    <table className="servers-table">
-                                        <thead>
-                                            <tr>
-                                                <th style={{ width: '42%' }}>
-                                                    Server <span 
-                                                        className="help-icon" 
-                                                        onMouseEnter={() => this.setState({ hoveredHelp: 'server' })}
-                                                        onMouseLeave={() => this.setState({ hoveredHelp: null })}
-                                                    >
-                                                        ?
-                                                    </span>
-                                                    {this.state.hoveredHelp === 'server' && (
-                                                        <div className="help-tooltip">
-                                                            Click the server name to connect. Select a different server to switch.
-                                                        </div>
-                                                    )}
-                                                </th>
-                                                <th style={{ width: '58%' }}>Players</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {Object.entries(this.state.servers).map(([address, server]) => 
-                                                this.renderServerRow(address, server)
+                                {!this.state.error && Object.keys(this.state.servers).length > 0 && (
+                                    <div className="servers-list-container">
+                                        {this.state.loading && (
+                                            <div className="loading-overlay">
+                                                <div className="loading-spinner">Refreshing servers...</div>
+                                            </div>
+                                        )}
+                                        <div className={`servers-list ${this.state.loading ? 'loading' : ''}`}>
+                                            {Object.entries(this.state.servers).map(([address, server]) =>
+                                                this.renderServerCard(address, server)
                                             )}
-                                        </tbody>
-                                    </table>
+                                        </div>
+                                    </div>
+                                )}
+                                {this.state.loading && Object.keys(this.state.servers).length === 0 && (
+                                    <div className="loading-message">Loading servers...</div>
                                 )}
                                 <div className="note">
                                     Click on the server name to connect

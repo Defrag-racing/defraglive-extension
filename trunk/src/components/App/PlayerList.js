@@ -54,7 +54,8 @@ class PlayerListBase extends React.Component {
 			isRefreshing: false,
 			refreshSuccess: false,
 			showTwitchDetails: false,
-			spectateCooldowns: new Map() // Track spectate button cooldowns
+			spectateCooldowns: new Map(), // Track spectate button cooldowns
+			isLoadingEnrichment: false // Track if we're waiting for API enrichment
 		}
         this.spec_timeout = null
         this.refreshInterval = null
@@ -68,6 +69,7 @@ class PlayerListBase extends React.Component {
         this.copyToClipboard = this.copyToClipboard.bind(this)
         this.fallbackCopyTextToClipboard = this.fallbackCopyTextToClipboard.bind(this)
         this.fetchServerData = this.fetchServerData.bind(this)
+        this.handleEscKey = this.handleEscKey.bind(this)
     }
     
 	toggle() {
@@ -78,16 +80,28 @@ class PlayerListBase extends React.Component {
 		this.props.togglePlayerlist()
 	}
 	
+    handleEscKey(event) {
+        if (event.key === 'Escape' && this.props.appstate.isPlayerlistOpen) {
+            event.preventDefault()
+            event.stopPropagation()
+            this.props.togglePlayerlist()
+        }
+    }
+
     componentDidMount() {
         this.props.getServerstate()
         this.fetchServerData()
+
+        // Add ESC key listener
+        document.addEventListener('keydown', this.handleEscKey)
+
         // Optional: Add periodic refresh every 30 seconds
         this.refreshInterval = setInterval(() => {
             if (this.props.appstate.isPlayerlistOpen) {
                 this.fetchServerData()
             }
-        }, 15000)
-        
+        }, 30000)
+
         // Start cooldown timer for spectate buttons
         this.cooldownTimer = setInterval(() => {
             this.updateCooldowns()
@@ -95,14 +109,28 @@ class PlayerListBase extends React.Component {
     }
     
     componentDidUpdate(prevProps) {
-        // Refetch server data when serverstate changes or when opening player list
-        if (prevProps.serverstate !== this.props.serverstate ||
-            (!prevProps.appstate.isPlayerlistOpen && this.props.appstate.isPlayerlistOpen)) {
+        // Only refetch when opening player list or when serverstate has meaningful changes
+        if (!prevProps.appstate.isPlayerlistOpen && this.props.appstate.isPlayerlistOpen) {
             this.fetchServerData()
+        } else if (prevProps.serverstate !== this.props.serverstate) {
+            // Only refresh if meaningful serverstate properties changed
+            const meaningfulChanges =
+                prevProps.serverstate.ip !== this.props.serverstate.ip ||
+                prevProps.serverstate.hostname !== this.props.serverstate.hostname ||
+                prevProps.serverstate.mapname !== this.props.serverstate.mapname ||
+                Object.keys(prevProps.serverstate.players || {}).length !== Object.keys(this.props.serverstate.players || {}).length
+
+            if (meaningfulChanges) {
+                console.log('[PlayerList] Meaningful serverstate change detected, refreshing')
+                this.fetchServerData()
+            }
         }
     }
     
     componentWillUnmount() {
+        // Remove ESC key listener
+        document.removeEventListener('keydown', this.handleEscKey)
+
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval)
         }
@@ -111,28 +139,28 @@ class PlayerListBase extends React.Component {
         }
     }
 
-	async fetchServerData() {		
+	async fetchServerData() {
 		try {
 			// Prevent multiple simultaneous refreshes
 			if (this.state.isRefreshing) {
 				return;
 			}
-			
-			this.setState({ isRefreshing: true, refreshSuccess: false });
-			
+
+			this.setState({ isRefreshing: true, refreshSuccess: false, isLoadingEnrichment: true });
+
 			// Get current server IP and player data from bot (always available)
 			const serverstateResponse = await fetch('https://tw.defrag.racing/serverstate.json')
 			const serverstate = await serverstateResponse.json()
-			
+
 			if (!serverstate.ip) {
-				this.setState({ isRefreshing: false, refreshSuccess: false });
+				this.setState({ isRefreshing: false, refreshSuccess: false, isLoadingEnrichment: false });
 				return
 			}
-			
+
 			// Try to get full server details including spectator data from servers API
 			let currentServerInfo = {}
 			let hasSpectatorData = false
-			
+
 			try {
 				const serversResponse = await fetch('https://defrag.racing/servers/json')
 				const serversData = await serversResponse.json()
@@ -141,26 +169,27 @@ class PlayerListBase extends React.Component {
 			} catch (error) {
 				console.error('[PlayerList] Could not fetch spectator data from servers API:', error)
 			}
-			
-			
+
+			// Only update state once we have enriched data or confirmed no enrichment available
 			this.setState({
 				currentServerAddress: serverstate.ip,
 				serverInfo: currentServerInfo,
 				serverName: currentServerInfo?.hostname || serverstate.hostname || 'Unknown',
 				hasSpectatorData: hasSpectatorData,
 				isRefreshing: false,
-				refreshSuccess: true
+				refreshSuccess: true,
+				isLoadingEnrichment: false
 			});
-						
+
 			// Clear success indicator after 2 seconds
 			setTimeout(() => {
 				this.setState({ refreshSuccess: false });
 			}, 2000);
-			
+
 		} catch (error) {
 			console.error('[PlayerList] Error during refresh:', error)
 			console.error('[PlayerList] Error stack:', error.stack)
-			this.setState({ isRefreshing: false, refreshSuccess: false });
+			this.setState({ isRefreshing: false, refreshSuccess: false, isLoadingEnrichment: false });
 		}
 	}
 
@@ -717,15 +746,29 @@ isGTKServer() {
 		const svgPlayers = <svg className="playerlist-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" title="Toggle Player List"><path d="M10 .4C4.697.4.399 4.698.399 10A9.6 9.6 0 0 0 10 19.601c5.301 0 9.6-4.298 9.6-9.601 0-5.302-4.299-9.6-9.6-9.6zm.896 3.466c.936 0 1.211.543 1.211 1.164 0 .775-.62 1.492-1.679 1.492-.886 0-1.308-.445-1.282-1.164 0-.621.396-1.492 1.75-1.492zm-1.75 8.727c-2.066 0-3.744-1.678-3.744-3.744s1.678-3.744 3.744-3.744 3.744 1.678 3.744 3.744-1.678 3.744-3.744 3.744zm0-6.008c-1.392 0-2.523 1.132-2.523 2.523s1.132 2.523 2.523 2.523 2.523-1.132 2.523-2.523-1.131-2.523-2.523-2.523z"/></svg>
 		let svgClose = <svg className="playerlist-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Player List"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
 		
-		const playersWithScores = this.getPlayerWithScores()
-		
-		// UPDATED: Use serverstate 't' field instead of unreliable follow_num
-		const activePlayers = playersWithScores.filter(player => 
-			player.t !== '3'
-		)
-		const allSpectators = playersWithScores.filter(player => 
-			player.t === '3'
-		)
+		// Only show players when we have enriched data or confirmed no enrichment available
+		// This prevents showing incomplete serverstate-only data with (Spectator) labels
+		let playersWithScores = []
+		let activePlayers = []
+		let allSpectators = []
+
+		// Show players when:
+		// 1. We either have enriched spectator data OR we confirmed no spectator data is available
+		// 2. Allow showing data during refresh (isLoadingEnrichment) if we already have data
+		const hasValidData = (this.state.hasSpectatorData || this.state.serverInfo !== null) &&
+			(!this.state.isLoadingEnrichment || (this.state.isLoadingEnrichment && this.state.serverInfo !== null))
+
+		if (hasValidData) {
+			playersWithScores = this.getPlayerWithScores()
+
+			// UPDATED: Use serverstate 't' field instead of unreliable follow_num
+			activePlayers = playersWithScores.filter(player =>
+				player.t !== '3'
+			)
+			allSpectators = playersWithScores.filter(player =>
+				player.t === '3'
+			)
+		}
 
 		const isOnAfkCooldown = Date.now() < this.state.afkControlCooldown
 		const afkCooldownSeconds = this.getAfkCooldown()
@@ -746,36 +789,38 @@ isGTKServer() {
 				<div className="playerlist-button" onClick={this.toggle}>
 					{this.props.appstate.isPlayerlistOpen ? svgClose : svgPlayers}
 				</div>
-				<div className="playerlist-content-wrap" style={{ width: '45%', minWidth: '400px', maxWidth: '650px' }}>
+				<div className="playerlist-content-wrap">
 					<div className="playerlist-content">
 						<div className="compact-header">
 							<div className="header-controls">
-								<button 
-									className="compact-header-btn refresh-btn" 
+								<button
+									className="compact-header-btn refresh-btn"
 									onClick={() => this.fetchServerData()}
 									title="Refresh Player List"
 								>
 									Refresh
 								</button>
+								<div className="center-buttons">
+									<button
+										className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
+										onClick={this.handleAfkReset}
+										disabled={isOnAfkCooldown}
+										title={isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : "Reset AFK timer"}
+									>
+										{isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : 'Reset AFK'}
+									</button>
+									<button
+										className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
+										onClick={this.handleAfkExtend}
+										disabled={isOnAfkCooldown}
+										title={isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : "Extend AFK timer by 5 minutes"}
+									>
+										{isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : 'Extend AFK by 5min'}
+									</button>
+								</div>
 								<button
-									className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
-									onClick={this.handleAfkReset}
-									disabled={isOnAfkCooldown}
-									title={isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : "Reset AFK timer"}
-								>
-									{isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : 'Reset AFK'}
-								</button>
-								<button
-									className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
-									onClick={this.handleAfkExtend}
-									disabled={isOnAfkCooldown}
-									title={isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : "Extend AFK timer by 5 minutes"}
-								>
-									{isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : 'Extend AFK by 5min'}
-								</button>
-								<button 
-									className="compact-header-btn close-btn" 
-									onClick={this.toggle} 
+									className="compact-header-btn close-btn"
+									onClick={this.toggle}
 									title="Close Player List"
 								>
 									✕
@@ -865,7 +910,7 @@ isGTKServer() {
 
 						{/* Modern Single Player Table */}
 						<div className="modern-players-section">
-							<div style={{ flex: '1', minWidth: '220px', maxWidth: '350px' }}>
+							<div style={{ flex: '1', minWidth: '220px' }}>
 								<div className="content" style={{ maxHeight: 'calc(100vh - 160px)', overflowY: 'scroll', paddingRight: '8px' }}>
 									{playersWithScores.length === 0 ? (
 										<div className="no-players">No players available</div>
@@ -1169,12 +1214,6 @@ isGTKServer() {
 													return null
 												})()
 											)}
-											
-											<div className="note m-t m-b" style={{ fontSize: '0.75rem', marginTop: '8px' }}>
-												<div style={{ fontSize: '0.7rem', opacity: '0.8' }}>
-													Showing {playersWithScores.length} players from serverstate{this.state.hasSpectatorData ? ' (enhanced with API data)' : ' (real-time data only)'}.
-												</div>
-											</div>
 										</div>
 									)}
 								</div>

@@ -72,6 +72,7 @@ class ConsoleBase extends React.Component {
         this.handleClickOutside = this.handleClickOutside.bind(this)
         this.handleGrantPermission = this.handleGrantPermission.bind(this)
         this.renderPermissionPopup = this.renderPermissionPopup.bind(this)
+        this.handleEscKey = this.handleEscKey.bind(this)
     }
 
     increaseFontSize() {
@@ -90,15 +91,25 @@ class ConsoleBase extends React.Component {
         }
     }
 
+    handleEscKey(event) {
+        if (event.key === 'Escape' && this.props.appstate.isConsoleOpen) {
+            event.preventDefault()
+            event.stopPropagation()
+            this.props.toggleConsole()
+        }
+    }
+
     componentWillUnmount() {
         document.removeEventListener('keypress', this.onKeyPress)
         document.removeEventListener('keydown', this.handleKeyPress)
+        document.removeEventListener('keydown', this.handleEscKey)
         document.removeEventListener('click', this.handleClickOutside)
     }
 
     componentDidMount() {
         document.addEventListener('keypress', this.onKeyPress)
         document.addEventListener('keydown', this.handleKeyPress)
+        document.addEventListener('keydown', this.handleEscKey)
         document.addEventListener('click', this.handleClickOutside)
 
         window.sendTranslationRequest = this.sendTranslationRequest;
@@ -942,7 +953,13 @@ render() {
 						</div>
 					</div>
 					<form action="send" className="console-input-wrap" onSubmit={this.onSubmit}>
-						<div className="close-console-button" onClick={this.toggleConsole} title="Close Console">{svgClose}</div>
+						<button
+							className="compact-header-btn close-btn"
+							onClick={this.toggleConsole}
+							title="Close Console"
+						>
+							✕
+						</button>
 						<div className="input-element-wrap">
 							{statusMessage}
 							<input type="text" className="input" ref={this.inputEl} title="Type your message here" />

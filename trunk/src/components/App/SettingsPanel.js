@@ -66,6 +66,7 @@ class SettingsPanelBase extends React.Component {
         this.showTooltip = this.showTooltip.bind(this)
         this.hideTooltip = this.hideTooltip.bind(this)
         this.updateCountdownDisplay = this.updateCountdownDisplay.bind(this) // NEW
+        this.handleEscKey = this.handleEscKey.bind(this)
     }
     
     showTooltip(text, event) {
@@ -109,7 +110,33 @@ class SettingsPanelBase extends React.Component {
             this.setState({ countdownDisplays: newCountdownDisplays })
         }
     }
-    
+
+    handleEscKey(event) {
+        if (event.key === 'Escape' && this.props.appstate.isSettingsPanelOpen) {
+            event.preventDefault()
+            event.stopPropagation()
+            this.props.toggleSettingsPanel()
+        }
+    }
+
+    componentDidMount() {
+        document.addEventListener('keydown', this.handleEscKey, true) // Use capture phase
+    }
+
+    componentDidUpdate(prevProps) {
+        // Focus the settings panel when it opens to enable keyboard events
+        if (!prevProps.appstate.isSettingsPanelOpen && this.props.appstate.isSettingsPanelOpen) {
+            const settingsPanel = document.querySelector('.settingspanel-wrap')
+            if (settingsPanel) {
+                settingsPanel.focus()
+            }
+        }
+    }
+
+    componentWillUnmount() {
+        document.removeEventListener('keydown', this.handleEscKey, true) // Match the addEventListener call
+    }
+
 	updateVidRestartSetting(key, value) {
 		console.log('updateVidRestartSetting called:', key, value, 'locked:', this.state.vidRestartLocked)
 		
@@ -313,17 +340,24 @@ class SettingsPanelBase extends React.Component {
         )
 
         return (
-            <div className={`settingspanel-wrap settingspanel-${this.props.appstate.isSettingsPanelOpen ? 'opened' : 'closed'}`}>
+            <div
+                className={`settingspanel-wrap settingspanel-${this.props.appstate.isSettingsPanelOpen ? 'opened' : 'closed'}`}
+                onKeyDown={this.handleEscKey}
+                tabIndex={this.props.appstate.isSettingsPanelOpen ? 0 : -1}
+            >
                 <div className="settingspanel-button" onClick={this.props.toggleSettingsPanel}>
                     {this.props.appstate.isSettingsPanelOpen ? svgClose : svgSettings}
                 </div>
                 <div className="settingspanel-content-wrap">
                     <div className="settingspanel-content">
                         <div className="header-top">
-                            <div className="h1">Settings Panel</div>
-                            <div className="close" onClick={this.props.toggleSettingsPanel}>
-                                {svgClose}
-                            </div>
+                            <button
+                                className="compact-header-btn close-btn"
+                                onClick={this.props.toggleSettingsPanel}
+                                title="Close Settings Panel"
+                            >
+                                ✕
+                            </button>
                         </div>
 
                         {/* Visual Settings - Instant Apply */}
