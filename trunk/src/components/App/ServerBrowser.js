@@ -675,12 +675,18 @@ class ServerBrowserBase extends React.Component {
                                                     {this.getPlayerStatus(player).length > 0 && (
                                                         <span className="status-indicator">!</span>
                                                     )}
-                                                    {player.hasTwitchLink && (
+                                                </span>
+                                                {/* Next-line Twitch indicators (PlayerList style layout) */}
+                                                {player.hasTwitchLink && (
+                                                    <div className="twitch-info-section">
                                                         <span className={`twitch-live-indicator ${player.isStreaming ? 'live' : ''}`}>
                                                             {player.isStreaming ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
                                                         </span>
-                                                    )}
-                                                </span>
+                                                        <div className="twitch-url" onClick={(e) => { e.stopPropagation(); this.handlePlayerClick(player); }}>
+                                                            twitch.tv/{player.twitchUsername}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {this.state.hoveredPlayer === player && (
                                                     <div className="player-tooltip-container">
                                                         {this.renderPlayerTooltip(player)}
@@ -704,12 +710,18 @@ class ServerBrowserBase extends React.Component {
                                                         {this.getPlayerStatus(spec).length > 0 && (
                                                             <span className="status-indicator">!</span>
                                                         )}
-                                                        {spec.hasTwitchLink && (
+                                                    </span>
+                                                    {/* Next-line Twitch indicators (PlayerList style layout) */}
+                                                    {spec.hasTwitchLink && (
+                                                        <div className="twitch-info-section">
                                                             <span className={`twitch-live-indicator ${spec.isStreaming ? 'live' : ''}`}>
                                                                 {spec.isStreaming ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
                                                             </span>
-                                                        )}
-                                                    </span>
+                                                            <div className="twitch-url" onClick={(e) => { e.stopPropagation(); this.handlePlayerClick(spec); }}>
+                                                                twitch.tv/{spec.twitchUsername}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                     {this.state.hoveredPlayer === spec && (
                                                         <div className="player-tooltip-container">
                                                             {this.renderPlayerTooltip(spec)}
@@ -739,12 +751,18 @@ class ServerBrowserBase extends React.Component {
                                                     {this.getPlayerStatus(spec).length > 0 && (
                                                         <span className="status-indicator">!</span>
                                                     )}
-                                                    {spec.hasTwitchLink && (
+                                                </span>
+                                                {/* Next-line Twitch indicators (PlayerList style layout) */}
+                                                {spec.hasTwitchLink && (
+                                                    <div className="twitch-info-section">
                                                         <span className={`twitch-live-indicator ${spec.isStreaming ? 'live' : ''}`}>
                                                             {spec.isStreaming ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
                                                         </span>
-                                                    )}
-                                                </span>
+                                                        <div className="twitch-url" onClick={(e) => { e.stopPropagation(); this.handlePlayerClick(spec); }}>
+                                                            twitch.tv/{spec.twitchUsername}
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {this.state.hoveredPlayer === spec && (
                                                     <div className="player-tooltip-container">
                                                         {this.renderPlayerTooltip(spec)}

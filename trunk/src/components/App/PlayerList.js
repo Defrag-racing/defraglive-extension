@@ -3,6 +3,7 @@ import { Q3STR } from '../../partials/Quake3'
 import { mapDispatch, mapState } from './State'
 import { connect } from 'react-redux'
 import { BOT_CONFIG } from '../../botConfig';
+import twitchLogo from '../../img/twitch-logo.svg';
 
 const SV_TYPE = {
     '0': 'auto',
@@ -50,10 +51,13 @@ class PlayerListBase extends React.Component {
 			serverName: null,
 			hasSpectatorData: false,
 			isRefreshing: false,
-			refreshSuccess: false
+			refreshSuccess: false,
+			showTwitchDetails: false,
+			spectateCooldowns: new Map() // Track spectate button cooldowns
 		}
         this.spec_timeout = null
         this.refreshInterval = null
+        this.cooldownTimer = null
         
         this.toggle = this.toggle.bind(this)
         this.spectatePlayerID = this.spectatePlayerID.bind(this)
@@ -82,6 +86,11 @@ class PlayerListBase extends React.Component {
                 this.fetchServerData()
             }
         }, 15000)
+        
+        // Start cooldown timer for spectate buttons
+        this.cooldownTimer = setInterval(() => {
+            this.updateCooldowns()
+        }, 100) // Update every 100ms for smooth countdown
     }
     
     componentDidUpdate(prevProps) {
@@ -95,6 +104,9 @@ class PlayerListBase extends React.Component {
     componentWillUnmount() {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval)
+        }
+        if (this.cooldownTimer) {
+            clearInterval(this.cooldownTimer)
         }
     }
 
@@ -129,10 +141,11 @@ class PlayerListBase extends React.Component {
 				console.error('[PlayerList] Could not fetch spectator data from servers API:', error)
 			}
 			
+			
 			this.setState({
 				currentServerAddress: serverstate.ip,
 				serverInfo: currentServerInfo,
-				serverName: serverstate.hostname || currentServerInfo?.hostname || 'Unknown',
+				serverName: currentServerInfo?.hostname || serverstate.hostname || 'Unknown',
 				hasSpectatorData: hasSpectatorData,
 				isRefreshing: false,
 				refreshSuccess: true
@@ -150,21 +163,49 @@ class PlayerListBase extends React.Component {
 		}
 	}
 
+    // Get remaining cooldown time for a player
+    getSpectateCooldown(id) {
+        const cooldown = this.state.spectateCooldowns.get(id)
+        if (!cooldown) return 0
+        
+        const elapsed = Date.now() - cooldown.startTime
+        const remaining = Math.max(0, cooldown.duration - elapsed)
+        return Math.ceil(remaining / 1000) // Return seconds
+    }
+
     spectatePlayerID(id) {
         if(this.props.twitchUser.role == 'guest') {
             return
         }
 
-        if(this.spec_timeout != null) {
+        // Check if this specific player is on cooldown
+        if(this.state.spectateCooldowns.has(id)) {
             return
         }
 
-        this.spec_timeout = setTimeout(() => {
-            const table = document.querySelector('.players-table')
-            if (table) {
-                table.classList.remove('loading')
+        // Add this player to cooldown
+        const newCooldowns = new Map(this.state.spectateCooldowns)
+        newCooldowns.set(id, { startTime: Date.now(), duration: 5000 })
+        this.setState({ spectateCooldowns: newCooldowns })
+
+        // Start countdown timer if not already running
+        if (!this.cooldownTimer) {
+            this.cooldownTimer = setInterval(() => {
+                this.setState({ spectateCooldowns: new Map(this.state.spectateCooldowns) })
+            }, 1000)
+        }
+
+        // Set timeout to remove cooldown
+        setTimeout(() => {
+            const updatedCooldowns = new Map(this.state.spectateCooldowns)
+            updatedCooldowns.delete(id)
+            this.setState({ spectateCooldowns: updatedCooldowns })
+            
+            // Clear timer if no more cooldowns
+            if (updatedCooldowns.size === 0 && this.cooldownTimer) {
+                clearInterval(this.cooldownTimer)
+                this.cooldownTimer = null
             }
-            this.spec_timeout = null
         }, 5000)
 
         this.props.sendCommand({
@@ -175,6 +216,11 @@ class PlayerListBase extends React.Component {
         const table = document.querySelector('.players-table')
         if (table) {
             table.classList.add('loading')
+            setTimeout(() => {
+                if (table) {
+                    table.classList.remove('loading')
+                }
+            }, 5000)
         }
     }
 
@@ -235,6 +281,24 @@ class PlayerListBase extends React.Component {
         })
 
         this.setState({ afkControlCooldown: Date.now() + 5000 })
+    }
+
+    updateCooldowns() {
+        const newCooldowns = new Map()
+        let hasChanges = false
+        
+        for (const [id, cooldown] of this.state.spectateCooldowns) {
+            const elapsed = Date.now() - cooldown.startTime
+            if (elapsed < cooldown.duration) {
+                newCooldowns.set(id, cooldown)
+            } else {
+                hasChanges = true
+            }
+        }
+        
+        if (hasChanges) {
+            this.setState({ spectateCooldowns: newCooldowns })
+        }
     }
 
     copyToClipboard(text) {
@@ -301,11 +365,13 @@ class PlayerListBase extends React.Component {
         return c1.includes(',live')
     }
 
-    // Check if player has nospec Twitch setting (nospec.twitch.tv/)
+    // Check if player has nospec Twitch setting AND is currently live
     hasNospecTwitch(player) {
         const c1 = player.c1 || ''
-        return c1.includes('nospec.twitch.tv/')
+        // Only block spectating if they have nospec.twitch.tv/ AND are currently live
+        return c1.includes('nospec.twitch.tv/') && c1.includes(',live')
     }
+
 
     // Handle Twitch link clicks
     handleTwitchClick(player, event) {
@@ -372,40 +438,41 @@ isGTKServer() {
 			
 			if (isGTK) {
 				// GTK SERVER SPECIAL HANDLING
-				// GTK server logic - debug logging disabled
-				
 				enrichedPlayers = serverstatePlayersNonBot.map(player => {
 					// Try to match by name only (with color stripping)
 					const cleanServerstateName = this.stripQuakeColors(player.n)
+					
+					// Find colored name from API players
+					const apiPlayerData = this.state.serverInfo.players ? 
+						Object.values(this.state.serverInfo.players).find(apiPlayer => {
+							const cleanAPIName = this.stripQuakeColors(apiPlayer.name)
+							return cleanAPIName === cleanServerstateName
+						}) : null
+					
+					// Find spectator data from scores
 					const scoreData = apiScores.find(score => {
-						const cleanAPIName = this.stripQuakeColors(score.name)
+						const cleanAPIName = this.stripQuakeColors(apiPlayerData?.name || '')
 						return cleanAPIName === cleanServerstateName
 					})
 					
-					if (scoreData) {
-						// Name match found - use API spectator data
-						const follow_num = scoreData.follow_num
-						// Debug: GTK matched player
-						
+					if (apiPlayerData || scoreData) {
 						return {
 							...player,
-							time: scoreData.time || 0,
-							follow_num: follow_num,
-							team: follow_num === -1 ? '0' : '3',
-							t: player.t, // Always prefer serverstate team status
+							n: apiPlayerData?.name || player.n, // Use API colored name
+							time: scoreData?.time || 0,
+							follow_num: scoreData?.follow_num || -1,
+							team: scoreData?.follow_num === -1 ? '0' : '3',
+							t: player.t,
 							nospec: player.nospec,
 							c1: player.c1,
-							clientId: scoreData.player_num, // Use API player_num as clientId
+							clientId: scoreData?.player_num || parseInt(player.id),
 							dataSource: 'gtk-matched'
 						}
 					} else {
-						// No name match - show as regular player from serverstate
-						// Debug: GTK no match found
-						
 						return {
 							...player,
 							time: 0,
-							follow_num: -1, // Assume not spectating anyone
+							follow_num: -1,
 							team: player.t || '0',
 							t: player.t || '0',
 							nospec: player.nospec,
@@ -415,66 +482,74 @@ isGTKServer() {
 						}
 					}
 				})
-				
-				// For GTK, don't add API-only players since serverstate is more reliable
-				
 			} else {
-				// NORMAL SERVER HANDLING (non-GTK)
+				// NON-GTK SERVER HANDLING
+				const processedPlayerIds = new Set()
+				
+				// First, process serverstate players and enrich with API data
 				enrichedPlayers = serverstatePlayersNonBot.map(player => {
-					// Try multiple matching criteria for non-GTK servers
+					processedPlayerIds.add(parseInt(player.id))
+					
+					// Find colored name from API players
+					const apiPlayerData = this.state.serverInfo.players ? 
+						Object.values(this.state.serverInfo.players).find(apiPlayer => {
+							// Try ID matching first
+							if (apiPlayer.clientId === parseInt(player.id)) return true
+							
+							// Fallback to name matching
+							const cleanAPIName = this.stripQuakeColors(apiPlayer.name)
+							const cleanServerstateName = this.stripQuakeColors(player.n)
+							return cleanAPIName === cleanServerstateName
+						}) : null
+					
+					// Find spectator data from scores
 					const scoreData = apiScores.find(score => {
-						const idMatch = score.player_num === parseInt(player.id)
-						const clientIdMatch = player.clientId && score.player_num === player.clientId
-						
-						// Name matching as fallback
-						const cleanServerstateName = this.stripQuakeColors(player.n)
-						const cleanAPIName = this.stripQuakeColors(score.name)
-						const nameMatch = cleanAPIName === cleanServerstateName
-						
-						return idMatch || clientIdMatch || nameMatch
+						return score.player_num === parseInt(player.id)
 					})
 					
-					const follow_num = scoreData ? scoreData.follow_num : -1
 					
 					return {
 						...player,
+						n: apiPlayerData?.name || player.n, // Use API colored name if available
 						time: scoreData?.time || 0,
-						follow_num: follow_num,
-						team: follow_num === -1 ? '0' : '3',
-						t: player.t || (follow_num === -1 ? '0' : '3'),
+						follow_num: scoreData?.follow_num || -1,
+						team: scoreData?.follow_num === -1 ? '0' : '3',
+						t: player.t,
 						nospec: player.nospec,
 						c1: player.c1,
-						clientId: player.clientId || parseInt(player.id),
-						dataSource: scoreData ? 'normal-matched' : 'normal-serverstate-only'
+						clientId: parseInt(player.id),
+						dataSource: apiPlayerData ? 'matched' : 'serverstate-only'
 					}
 				})
 				
-				// Check for API-only players (for non-GTK servers)
-				const serverstatePlayerNames = serverstatePlayersNonBot.map(p => this.stripQuakeColors(p.n))
-				const apiOnlyPlayers = apiScores.filter(score => {
-					const cleanAPIName = this.stripQuakeColors(score.name)
-					return score.name && !serverstatePlayerNames.includes(cleanAPIName)
-				}).map(score => ({
-					id: score.player_num,
-					n: score.name,
-					clientId: score.player_num,
-					time: score.time || 0,
-					follow_num: score.follow_num,
-					team: score.follow_num === -1 ? '0' : '3',
-					t: score.follow_num === -1 ? '0' : '3',
-					nospec: 0,
-					country: 'Unknown',
-					logged: false,
-					dataSource: 'api-only'
-				}))
+				// Add API-only players that aren't in serverstate
+				const apiOnlyPlayers = apiScores
+					.filter(score => !processedPlayerIds.has(score.player_num))
+					.map(score => {
+						// Find colored name from API players data
+						const apiPlayerData = this.state.serverInfo.players ? 
+							Object.values(this.state.serverInfo.players).find(apiPlayer => 
+								apiPlayer.clientId === score.player_num
+							) : null
+						
+						return {
+							id: score.player_num,
+							n: apiPlayerData?.name || `Player ${score.player_num}`,
+							time: score.time || 0,
+							follow_num: score.follow_num,
+							team: score.follow_num === -1 ? '0' : '3',
+							t: score.follow_num === -1 ? '0' : '3',
+							nospec: false,
+							c1: '',
+							clientId: score.player_num,
+							dataSource: 'api-only'
+						}
+					})
 				
-				if (apiOnlyPlayers.length > 0) {
-					enrichedPlayers = [...enrichedPlayers, ...apiOnlyPlayers]
-				}
+				enrichedPlayers = [...enrichedPlayers, ...apiOnlyPlayers]
 			}
-			
 		} else {
-			// No API data available - use serverstate only for all servers
+			// No API data available, use serverstate data only
 			enrichedPlayers = serverstatePlayersNonBot.map(player => ({
 				...player,
 				time: 0,
@@ -483,12 +558,18 @@ isGTKServer() {
 				t: player.t || '0',
 				nospec: player.nospec,
 				c1: player.c1,
-				clientId: player.clientId || parseInt(player.id),
-				dataSource: 'serverstate-only'
+				clientId: parseInt(player.id),
+				dataSource: 'serverstate-fallback'
 			}))
 		}
 		
 		return enrichedPlayers
+	}
+	
+	// Helper function to strip Quake 3 color codes  
+	stripQuakeColors(text) {
+		if (!text) return ''
+		return text.replace(/\^./g, '').toLowerCase().trim()
 	}
 
     getPlayerStatus(player) {
@@ -571,6 +652,7 @@ isGTKServer() {
 		let svgClose = <svg className="playerlist-svg opened" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" title="Close Player List"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
 		
 		const playersWithScores = this.getPlayerWithScores()
+		
 		// UPDATED: Use serverstate 't' field instead of unreliable follow_num
 		const activePlayers = playersWithScores.filter(player => 
 			player.t !== '3'
@@ -599,166 +681,135 @@ isGTKServer() {
 				</div>
 				<div className="playerlist-content-wrap" style={{ width: '45%', minWidth: '400px', maxWidth: '650px' }}>
 					<div className="playerlist-content">
-						<div className="header-top">
-							<div className="h1">Player List</div>
+						<div className="compact-header">
 							<div className="header-controls">
-								<div className="refresh-button" onClick={() => {
-									this.fetchServerData()
-								}} title="Refresh Player List" style={{ transform: 'scale(1.6)' }}>
-									<svg className="refresh-svg animated-refresh" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ 
-										transition: 'transform 0.3s ease',
-										animation: this.state.isRefreshing ? 'spin 1s linear infinite' : 'none'
-									}}>
-										<path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-									</svg>
-								</div>
-								<div className="afk-controls" style={{ gap: '8px', display: 'flex', alignItems: 'center', marginLeft: '12px' }}>
-									<button 
-										className={`afk-control-btn reset ${isOnAfkCooldown ? 'cooldown' : ''}`}
-										onClick={this.handleAfkReset}
-										disabled={isOnAfkCooldown}
-										title="Reset AFK timer"
-										style={{ transform: 'scale(1.3)' }}
-									>
-										🔄
-									</button>
-									<button 
-										className={`afk-control-btn extend ${isOnAfkCooldown ? 'cooldown' : ''}`}
-										onClick={this.handleAfkExtend}
-										disabled={isOnAfkCooldown}
-										title="Extend AFK timer by 5 minutes"
-										style={{ transform: 'scale(1.3)' }}
-									>
-										+5m
-									</button>
-								</div>
-								<div className="close" onClick={this.toggle} title="Close Player List" style={{ transform: 'scale(1.3)', marginLeft: '12px' }}>
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><g clipRule="evenodd" fillRule="evenodd"><path d="M16 0C7.163 0 0 7.163 0 16c0 8.836 7.163 16 16 16 8.836 0 16-7.163 16-16S24.836 0 16 0zm0 30C8.268 30 2 23.732 2 16S8.268 2 16 2s14 6.268 14 14-6.268 14-14 14z"/><path d="M22.729 21.271l-5.268-5.269 5.238-5.195a.992.992 0 000-1.414 1.018 1.018 0 00-1.428 0l-5.231 5.188-5.309-5.10a1.007 1.007 0 00-1.428 0 1.015 1.015 0 000 1.432l5.301 5.302-5.331 5.287a.994.994 0 000 1.414 1.017 1.017 0 001.429 0l5.324-5.28 5.276 5.276a1.007 1.007 0 001.428 0 1.015 1.015 0 00-.001-1.431z"/></g></svg>
-								</div>
+								<button 
+									className="compact-header-btn refresh-btn" 
+									onClick={() => this.fetchServerData()}
+									title="Refresh Player List"
+								>
+									Refresh
+								</button>
+								<button 
+									className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
+									onClick={this.handleAfkReset}
+									disabled={isOnAfkCooldown}
+									title="Reset AFK timer"
+								>
+									Reset AFK
+								</button>
+								<button 
+									className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
+									onClick={this.handleAfkExtend}
+									disabled={isOnAfkCooldown}
+									title="Extend AFK timer by 5 minutes"
+								>
+									+5 min
+								</button>
+								<button 
+									className="compact-header-btn close-btn" 
+									onClick={this.toggle} 
+									title="Close Player List"
+								>
+									✕
+								</button>
 							</div>
 						</div>
 						
 						<div className="twitch-explanation">
-							<div className="explanation-title">🟣 Twitch Integration</div>
-							<div className="explanation-content">
-								<span><strong>🔴 CURRENTLY LIVE</strong> - Player is streaming live on Twitch</span>
-								<span><strong>🟣 TWITCH</strong> - Player has Twitch account (offline)</span>
-								<span>Regular players: Click name to spectate, click Twitch URL to watch stream</span>
-								<span>Players with "(Twitch Only)": Click name to open Twitch (spectating disabled)</span>
+							<div 
+								className="explanation-header"
+								onClick={() => this.setState({ showTwitchDetails: !this.state.showTwitchDetails })}
+								style={{ cursor: 'pointer', textAlign: 'center' }}
+							>
+								<span style={{ color: '#9146ff', fontWeight: 'bold', fontSize: '0.8rem' }}>Are you a streamer?</span> <span style={{ fontSize: '0.7rem' }}>Click for details</span>
 							</div>
+							{this.state.showTwitchDetails && (
+								<div className="explanation-content">
+									<div><strong>Regular Twitch Players:</strong></div>
+									<div><strong>Format:</strong> /color1 "twitch.tv/username"</div>
+									<div><strong>Behavior:</strong> Players can be spectated as usual, with their Twitch link displayed next to their nickname.</div>
+									<div><strong>Click Behavior:</strong> Clicking the name initiates spectating; clicking the Twitch URL opens the stream.</div>
+									
+									<div style={{ marginTop: '8px' }}><strong>NoSpec Twitch Players:</strong></div>
+									<div><strong>Format:</strong> /color1 "nospec-twitch.tv/username"</div>
+									<div><strong>Behavior:</strong> These players cannot be spectated, likely because they're streaming and prefer not to be disrupted.</div>
+									<div><strong>Click Behavior:</strong> Clicking either the name or URL opens their Twitch stream.</div>
+									
+									<div style={{ marginTop: '8px' }}><strong>How to Set Your Twitch:</strong></div>
+									<div>Use /color1 "twitch.tv/yourusername" to display your stream link to other players.</div>
+									<div>Add "nospec-" prefix if you don't want to be spectated while streaming.</div>
+								</div>
+							)}
 						</div>
 						
-						<div className="section" style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-							{/* Left Column - Server Info */}
-							<div style={{ flex: '0 0 32%', minWidth: '150px' }}>
-								<div className="server-info-section" style={{ overflow: 'visible' }}>
-									<div className="header" style={{ fontSize: '0.85rem', marginBottom: '6px' }}>Current Server</div>
-									<div className="content" style={{ overflow: 'visible' }}>
-										<div className="server-details" style={{ overflow: 'visible' }}>
-											<div className="detail-row" style={{ marginBottom: '2px' }}>
-												<span className="server-name-display" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
-													<Q3STR s={serverName}/>
-												</span>
-											</div>
-											
-											<div className="detail-row" style={{ marginBottom: '2px' }}>
-												<span style={{ fontSize: '0.7rem' }}>Copy IP:</span>
-												<button 
-													className={`copy-button-small ${this.state.copySuccess === serverAddress ? 'copied' : ''}`}
-													onClick={() => this.copyToClipboard(serverAddress)}
-													title={`Copy IP address: ${serverAddress}`}
-													style={{ fontSize: '0.65rem', padding: '1px 2px', marginLeft: '4px' }}
-												>
-													📋
-												</button>
-											</div>
-											
-											<div className="detail-row" style={{ marginBottom: '2px', overflow: 'visible', position: 'static' }}>
-												<span className="server-map" style={{ fontSize: '0.7rem' }}>
-													Map: <a 
-														href={`https://defrag.racing/maps/${serverMap}`} 
-														target="_blank" 
-														rel="noopener noreferrer"
-														onClick={(e) => e.stopPropagation()}
-													>
-														<Q3STR s={serverMap}/>
-													</a>
-												</span>
-												<button 
-													className={`copy-button-small ${this.state.copySuccess === serverMap ? 'copied' : ''}`}
-													onClick={() => this.copyToClipboard(serverMap)}
-													title="Copy map name"
-													style={{ 
-														fontSize: '0.65rem', 
-														padding: '1px 2px',
-														marginLeft: '4px'
-													}}
-												>
-													📋
-												</button>
-											</div>
-											
-											<div className="detail-row">
-												<span className="server-physics" style={{ fontSize: '0.7rem' }}>
-													{serverPhysics}
-												</span>
-												<span className="player-count-inline" style={{ fontSize: '0.7rem' }}>
-													Players: {totalPlayerCount}
-												</span>
-											</div>
-										</div>
-									</div>
-								</div>
-
-								<div className="instructions" style={{ marginTop: '8px', fontSize: '0.65rem', padding: '4px', lineHeight: '1.3', width: '140px' }}>
-									Click a player name to switch spectator POV. Or use twitch chat with "?n" to cycle through players. Players with 🙏 have nospec enabled - click the icon to request spectating.
-									{!this.state.hasSpectatorData && (
-										<div style={{ marginTop: '4px', color: '#ff9800', fontStyle: 'italic', fontSize: '0.6rem' }}>
-											Note: Using real-time serverstate data. API spectator relationships may be outdated.
-										</div>
-									)}
-									{this.state.hasSpectatorData && (
-										<div style={{ marginTop: '4px', color: '#4CAF50', fontStyle: 'italic', fontSize: '0.6rem' }}>
-											Showing real-time serverstate data enhanced with API spectator info.
-										</div>
-									)}
-								</div>
+						{/* Compact Server Info */}
+						<div className="compact-server-info">
+							<div className="server-row">
+								<span className="server-name"><Q3STR s={serverName}/></span>
+								<button 
+									className={`copy-btn ${this.state.copySuccess === serverAddress ? 'copied' : ''}`}
+									onClick={() => this.copyToClipboard(serverAddress)}
+									title={`Copy IP: ${serverAddress}`}
+								>
+									📋 Copy IP
+								</button>
 							</div>
+							<div className="map-row">
+								<span className="map-info">Map: 
+									<a 
+										href={`https://defrag.racing/maps/${serverMap}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="map-link"
+										title="View map on defrag.racing"
+									>
+										<Q3STR s={serverMap}/>
+									</a>
+								</span>
+								<button 
+									className={`copy-btn ${this.state.copySuccess === serverMap ? 'copied' : ''}`}
+									onClick={() => this.copyToClipboard(serverMap)}
+									title="Copy map name"
+								>
+									📋
+								</button>
+							</div>
+						</div>
 
-							{/* Right Column - Player Table */}
+						{/* Modern Single Player Table */}
+						<div className="modern-players-section">
 							<div style={{ flex: '1', minWidth: '220px', maxWidth: '350px' }}>
-								<div className="content" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' }}>
+								<div className="content" style={{ maxHeight: 'calc(100vh - 160px)', overflowY: 'scroll', paddingRight: '8px' }}>
 									{playersWithScores.length === 0 ? (
 										<div className="no-players">No players available</div>
 									) : (
 										<div>
-											<table className="players-table" style={{ fontSize: '0.85rem' }}>
-												<thead>
-													<tr>
-														<th style={{ padding: '4px 6px' }}>
-															Player <span 
-																className="help-icon" 
-																onMouseEnter={() => this.setState({ hoveredHelp: 'player' })}
-																onMouseLeave={() => this.setState({ hoveredHelp: null })}
-															>
-																?
-															</span>
-															{this.state.hoveredHelp === 'player' && (
-																<div className="help-tooltip">
-																	Click a player name to spectate their POV. Players with 🙏 have nospec enabled - click to politely request spectating. "Spectate Next" cycles automatically. Data shows real-time serverstate info{this.state.hasSpectatorData ? ' enhanced with API data' : ''}.
-																</div>
-															)}
-														</th>
-													</tr>
-												</thead>
-												<tbody>
+											<div className="help-section">
+												<span className="help-text">
+													Players <span 
+														className="help-icon" 
+														onMouseEnter={() => this.setState({ hoveredHelp: 'player' })}
+														onMouseLeave={() => this.setState({ hoveredHelp: null })}
+													>
+														?
+													</span>
+													{this.state.hoveredHelp === 'player' && (
+														<div className="help-tooltip">
+															Use spectate buttons to spectate players. Players with 🙏 have nospec enabled. Data shows real-time serverstate info{this.state.hasSpectatorData ? ' enhanced with API data' : ''}.
+														</div>
+													)}
+												</span>
+											</div>
+											<div className="players-list">
 													{activePlayers.map((player) => {
 														// UPDATED: GTK-aware spectator relationship detection
 														let followingSpecs = []
 														
+														// Always check for spectator relationships (even without API data)
+														const isGTK = this.isGTKServer()
+														
 														if (this.state.hasSpectatorData) {
-															const isGTK = this.isGTKServer()
-															
 															if (isGTK) {
 																// For GTK servers: Only use follow_num for spectators that were successfully matched by name
 																followingSpecs = allSpectators.filter(spec => {
@@ -773,6 +824,13 @@ isGTKServer() {
 																	spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
 																)
 															}
+														} else {
+															// Fallback: Use serverstate follow_num data even without API
+															followingSpecs = allSpectators.filter(spec => {
+																const playerIdMatch = spec.follow_num === parseInt(player.id)
+																const clientIdMatch = spec.follow_num === player.clientId
+																return playerIdMatch || clientIdMatch
+															})
 														}
 														
 														const canSpectate = this.canSpectatePlayer(player)
@@ -780,162 +838,167 @@ isGTKServer() {
 														
 														return (
 															<React.Fragment key={`player-${player.id || player.clientId}`}>
-																<tr className={!canSpectate ? 'nospec-player' : ''}>
-																	<td style={{ padding: '3px 6px' }}>
-																		<div className="player-row">
-																			<div 
-																				className={`player-info ${canSpectate && !this.hasNospecTwitch(player) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(player) ? 'twitch-player' : ''}`}
-																				onClick={
-																					this.hasNospecTwitch(player) ? 
-																						(e) => this.handleTwitchClick(player, e) : 
-																						(canSpectate ? () => this.spectatePlayerID(player.id) : undefined)
-																				}
-																				onMouseEnter={() => this.setState({ hoveredPlayer: player })}
-																				onMouseLeave={() => this.setState({ hoveredPlayer: null })}
-																				title={
-																					this.hasNospecTwitch(player) ? 
-																						(this.isPlayerLive(player) ? `Watch ${this.getTwitchUsername(player)} LIVE on Twitch!` : `Visit ${this.getTwitchUsername(player)} on Twitch`) :
-																						(canSpectate ? "Click to spectate this player" : "Cannot spectate this player")
-																				}
-																			>
-																				<Q3STR s={player.n}/>
-																				{player.time > 0 && (
-																					<span className="player-time"> ({this.formatTime(player.time)})</span>
-																				)}
-																				{this.getPlayerStatus(player).length > 0 && (
-																					<span className="status-indicator">!</span>
-																				)}
-																				
-																				{/* Twitch indicators for regular twitch.tv/ players */}
-																				{this.getTwitchUsername(player) && !this.hasNospecTwitch(player) && (
-																					<div className="twitch-info-section">
-																						<span className={`twitch-live-indicator ${this.isPlayerLive(player) ? 'live' : ''}`}>
-																							{this.isPlayerLive(player) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
-																						</span>
-																						<div className="twitch-url" onClick={(e) => this.handleTwitchClick(player, e)}>
-																							twitch.tv/{this.getTwitchUsername(player)}
-																						</div>
-																					</div>
-																				)}
-																				
-																				{/* Show different indicators for different reasons */}
-																				{!canSpectate && (player.t === '3' || player.follow_num !== -1) && (
-																					<span className="spectator-indicator"> (Spectator)</span>
-																				)}
-																				{!canSpectate && player.t !== '3' && player.follow_num === -1 && !this.hasNospecTwitch(player) && (
-																					<span className="nospec-indicator"> (No Spectating)</span>
-																				)}
-																				{this.hasNospecTwitch(player) && (
-																					<div className="nospec-twitch-section">
-																						<span className={`twitch-live-indicator ${this.isPlayerLive(player) ? 'live' : ''}`}>
-																							{this.isPlayerLive(player) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
-																						</span>
-																						<span className="nospec-indicator"> (Twitch Only)</span>
-																					</div>
+																<div className="player-item">
+																	<div className="player-main-row">
+																		{canSpectate && !this.hasNospecTwitch(player) && (() => {
+																			const cooldownSeconds = this.getSpectateCooldown(player.id)
+																			const isOnCooldown = cooldownSeconds > 0
+																			
+																			return (
+																				<button 
+																					className={`compact-spectate-btn ${isOnCooldown ? 'cooldown' : ''}`}
+																					onClick={() => !isOnCooldown && this.spectatePlayerID(player.id)}
+																					disabled={isOnCooldown}
+																					title={isOnCooldown ? `Wait ${cooldownSeconds}s` : "Spectate this player"}
+																				>
+																					{isOnCooldown ? `Wait ${cooldownSeconds}s` : 'Click to spectate'}
+																				</button>
+																			)
+																		})()}
+																		<div 
+																			className={`player-info ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(player) ? 'twitch-player' : ''}`}
+																			onMouseEnter={() => this.setState({ hoveredPlayer: player })}
+																			onMouseLeave={() => this.setState({ hoveredPlayer: null })}
+																		>
+																			<Q3STR s={player.n}/>
+																			{player.time > 0 && (
+																				<span className="player-time"> ({this.formatTime(player.time)})</span>
+																			)}
+																			{this.getPlayerStatus(player).length > 0 && (
+																				<span className="status-indicator">!</span>
+																			)}
+																		</div>
+																		
+																		{/* Compact Twitch buttons */}
+																		{this.getTwitchUsername(player) && (
+																			<div className="compact-twitch-section">
+																				<button 
+																					className={`compact-twitch-btn ${this.isPlayerLive(player) ? 'live' : 'offline'}`}
+																					onClick={(e) => this.handleTwitchClick(player, e)}
+																					title={this.isPlayerLive(player) ? `Watch ${this.getTwitchUsername(player)} LIVE` : `Visit ${this.getTwitchUsername(player)}`}
+																				>
+																					<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(player)}
+																				</button>
+																				{this.isPlayerLive(player) ? (
+																					<span className="live-indicator">🔴 CURRENTLY LIVE</span>
+																				) : (
+																					<span className="offline-indicator">⚫ CURRENTLY OFFLINE</span>
 																				)}
 																			</div>
-																			{!canSpectate && this.props.twitchUser.role !== 'guest' && (
-																				<div 
-																					className={`request-spectate-btn ${isOnCooldown ? 'cooldown' : ''}`}
-																					onClick={!isOnCooldown ? () => this.requestSpectate(player.n) : undefined}
-																					title={isOnCooldown ? "Please wait before requesting again" : "Politely request to spectate this player"}
-																				>
-																					🙏
-																				</div>
-																			)}
-																			{this.state.hoveredPlayer === player && (
-																				<div className="player-tooltip-container">
-																					{this.renderPlayerTooltip(player)}
+																		)}
+																	</div>
+																	
+																	{/* Additional content */}
+																	<div>
+																		{/* Additional indicators */}
+																		{!canSpectate && (player.t === '3' || player.follow_num !== -1) && (
+																			<span className="spectator-indicator">(Spectator)</span>
+																		)}
+																		{!canSpectate && player.t !== '3' && player.follow_num === -1 && !this.hasNospecTwitch(player) && !this.getTwitchUsername(player) && (
+																			<span className="nospec-indicator">(No Spectating)</span>
+																		)}
+																		
+																		{/* Request spectate button */}
+																		{!canSpectate && this.props.twitchUser.role !== 'guest' && (
+																			<button 
+																				className={`request-spectate-btn ${isOnCooldown ? 'cooldown' : ''}`}
+																				onClick={!isOnCooldown ? () => this.requestSpectate(player.n) : undefined}
+																				title={isOnCooldown ? "Please wait before requesting again" : "Politely request to spectate this player"}
+																			>
+																				🙏
+																			</button>
+																		)}
+																		
+																		{/* Tooltip */}
+																		{this.state.hoveredPlayer === player && (
+																			<div className="player-tooltip-container">
+																				{this.renderPlayerTooltip(player)}
+																			</div>
+																		)}
+																	</div>
+																	
+																	{/* Spectators following this player */}
+																	{followingSpecs.map((spec) => (
+																	<div key={`spec-${spec.id || spec.clientId}`} className="spectator-item">
+																		<div className="spectator-main-row">
+																			<div className="spectator-info">
+																				<span className="spectator-eye">👁️</span>
+																				<Q3STR s={spec.n}/>
+																				{spec.time > 0 && (
+																					<span className="player-time"> ({this.formatTime(spec.time)})</span>
+																				)}
+																				{this.getPlayerStatus(spec).length > 0 && (
+																					<span className="status-indicator">!</span>
+																				)}
+																			</div>
+																			
+																			{/* Compact Twitch buttons for spectators */}
+																			{this.getTwitchUsername(spec) && (
+																				<div className="compact-twitch-section">
+																					<button 
+																						className={`compact-twitch-btn ${this.isPlayerLive(spec) ? 'live' : 'offline'}`}
+																						onClick={(e) => this.handleTwitchClick(spec, e)}
+																						title={this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE` : `Visit ${this.getTwitchUsername(spec)}`}
+																					>
+																						<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(spec)}
+																					</button>
+																					{this.isPlayerLive(spec) ? (
+																						<span className="live-indicator">🔴 CURRENTLY LIVE</span>
+																					) : (
+																						<span className="offline-indicator">⚫ CURRENTLY OFFLINE</span>
+																					)}
 																				</div>
 																			)}
 																		</div>
-																	</td>
-																</tr>
-																{followingSpecs.map((spec) => (
-																	<tr key={`spec-${spec.id || spec.clientId}`} className="spectator">
-																		<td style={{ padding: '3px 6px' }}>
-																			<div className="player-row">
-																				<div 
-																					className={`player-info ${this.canSpectatePlayer(spec) && !this.hasNospecTwitch(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(spec) ? 'twitch-player' : ''}`}
-																					onClick={
-																						this.hasNospecTwitch(spec) ? 
-																							(e) => this.handleTwitchClick(spec, e) : 
-																							(this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined)
-																					}
-																					onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
-																					onMouseLeave={() => this.setState({ hoveredPlayer: null })}
-																					title={
-																						this.hasNospecTwitch(spec) ? 
-																							(this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE on Twitch!` : `Visit ${this.getTwitchUsername(spec)} on Twitch`) :
-																							(this.canSpectatePlayer(spec) ? "Click to spectate this player" : "Cannot spectate this player")
-																					}
-																				>
-																					👁️ <Q3STR s={spec.n}/>
-																					{spec.time > 0 && (
-																						<span className="player-time"> ({this.formatTime(spec.time)})</span>
-																					)}
-																					{this.getPlayerStatus(spec).length > 0 && (
-																						<span className="status-indicator">!</span>
-																					)}
-																					{/* Twitch indicators for spectators */}
-																					{this.getTwitchUsername(spec) && !this.hasNospecTwitch(spec) && (
-																						<div className="twitch-info-section">
-																							<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
-																								{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
-																							</span>
-																							<div className="twitch-url" onClick={(e) => this.handleTwitchClick(spec, e)}>
-																								twitch.tv/{this.getTwitchUsername(spec)}
-																							</div>
-																						</div>
-																					)}
-																					{this.hasNospecTwitch(spec) && (
-																						<div className="nospec-twitch-section">
-																							<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
-																								{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
-																							</span>
-																							<span className="nospec-indicator"> (Twitch Only)</span>
-																						</div>
-																					)}
-																				</div>
-																				{this.state.hoveredPlayer === spec && (
-																					<div className="player-tooltip-container">
-																						{this.renderPlayerTooltip(spec)}
-																					</div>
-																				)}
+																		
+																		{/* Tooltip */}
+																		{this.state.hoveredPlayer === spec && (
+																			<div className="player-tooltip-container">
+																				{this.renderPlayerTooltip(spec)}
 																			</div>
-																		</td>
-																	</tr>
-																))}
+																		)}
+																	</div>
+																	))}
+																</div>
 															</React.Fragment>
 														)
 													})}
-												</tbody>
-											</table>
+											</div>
 											
 											{/* UPDATED: GTK-aware free spectators section */}
-											{this.state.hasSpectatorData && allSpectators.length > 0 && (
+											{allSpectators.length > 0 && (
 												(() => {
 													// Find spectators who aren't following any active player OR don't have reliable data
 													const freeSpectators = allSpectators.filter(spec => {
 														const isGTK = this.isGTKServer()
 														
-														if (isGTK) {
-															// For GTK: Show as free spectator if no name match OR not following anyone
-															const hasReliableData = spec.dataSource === 'gtk-matched'
-															if (!hasReliableData) {
-																return true // No name match - show as free spectator
+														if (this.state.hasSpectatorData) {
+															if (isGTK) {
+																// For GTK: Show as free spectator if no name match OR not following anyone
+																const hasReliableData = spec.dataSource === 'gtk-matched'
+																if (!hasReliableData) {
+																	return true // No name match - show as free spectator
+																}
+																
+																// Has reliable data - check if following any active player
+																const isFollowingActivePlayer = activePlayers.some(player => 
+																	spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
+																)
+																return !isFollowingActivePlayer
+															} else {
+																// For non-GTK: Normal logic
+																const isFollowingActivePlayer = activePlayers.some(player => 
+																	spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
+																)
+																return !isFollowingActivePlayer
 															}
-															
-															// Has reliable data - check if following any active player
-															const isFollowingActivePlayer = activePlayers.some(player => 
-																spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
-															)
-															return !isFollowingActivePlayer
 														} else {
-															// For non-GTK: Normal logic
-															const isFollowingActivePlayer = activePlayers.some(player => 
-																spec.follow_num === player.clientId || spec.follow_num === parseInt(player.id)
-															)
+															// Fallback: Use serverstate follow_num data even without API
+															const isFollowingActivePlayer = activePlayers.some(player => {
+																const playerIdMatch = spec.follow_num === parseInt(player.id)
+																const clientIdMatch = spec.follow_num === player.clientId
+																return playerIdMatch || clientIdMatch
+															})
 															return !isFollowingActivePlayer
 														}
 													})
@@ -944,68 +1007,52 @@ isGTKServer() {
 														return (
 															<div className="free-spectators">
 																<div className="header">Spectators</div>
-																<table className="players-table" style={{ fontSize: '0.85rem' }}>
-																	<tbody>
-																		{freeSpectators.map((spec) => (
-																			<tr key={`free-spec-${spec.id || spec.clientId}`}>
-																				<td style={{ padding: '3px 6px' }}>
-																					<div className="player-row">
-																						<div 
-																							className={`player-info ${this.canSpectatePlayer(spec) && !this.hasNospecTwitch(spec) ? 'link' : 'nospec-link'} ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(spec) ? 'twitch-player' : ''}`}
-																							onClick={
-																								this.hasNospecTwitch(spec) ? 
-																									(e) => this.handleTwitchClick(spec, e) : 
-																									(this.canSpectatePlayer(spec) ? () => this.spectatePlayerID(spec.id) : undefined)
-																							}
-																							onMouseEnter={() => this.setState({ hoveredPlayer: spec })}
-																							onMouseLeave={() => this.setState({ hoveredPlayer: null })}
-																							title={
-																								this.hasNospecTwitch(spec) ? 
-																									(this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE on Twitch!` : `Visit ${this.getTwitchUsername(spec)} on Twitch`) :
-																									(this.canSpectatePlayer(spec) ? "Click to spectate this player" : "Cannot spectate this player")
-																							}
+																<div className="spectators-list">
+																	{freeSpectators.map((spec) => (
+																		<div key={`free-spec-${spec.id || spec.clientId}`} className="spectator-item">
+																			<div className="spectator-main-row">
+																				<div className="spectator-info">
+																					<span className="spectator-eye">👁️</span>
+																					<Q3STR s={spec.n}/> 
+																					<span className="spectating-info">
+																						{spec.dataSource === 'gtk-serverstate-only' ? 
+																							'(spectator unknown)' : 
+																							'(spectator)'
+																						}
+																					</span>
+																					{this.getPlayerStatus(spec).length > 0 && (
+																						<span className="status-indicator">!</span>
+																					)}
+																				</div>
+																				
+																				{/* Compact Twitch buttons for free spectators */}
+																				{this.getTwitchUsername(spec) && (
+																					<div className="compact-twitch-section">
+																						<button 
+																							className={`compact-twitch-btn ${this.isPlayerLive(spec) ? 'live' : 'offline'}`}
+																							onClick={(e) => this.handleTwitchClick(spec, e)}
+																							title={this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE` : `Visit ${this.getTwitchUsername(spec)}`}
 																						>
-																							<Q3STR s={spec.n}/> 
-																							<span className="spectating-info">
-																								{spec.dataSource === 'gtk-serverstate-only' ? 
-																									'(spectator unknown)' : 
-																									'(spectator)'
-																								}
-																							</span>
-																							{this.getPlayerStatus(spec).length > 0 && (
-																								<span className="status-indicator">!</span>
-																							)}
-																							{/* Twitch indicators for free spectators */}
-																							{this.getTwitchUsername(spec) && !this.hasNospecTwitch(spec) && (
-																								<div className="twitch-info-section">
-																									<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
-																										{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
-																									</span>
-																									<div className="twitch-url" onClick={(e) => this.handleTwitchClick(spec, e)}>
-																										twitch.tv/{this.getTwitchUsername(spec)}
-																									</div>
-																								</div>
-																							)}
-																							{this.hasNospecTwitch(spec) && (
-																								<div className="nospec-twitch-section">
-																									<span className={`twitch-live-indicator ${this.isPlayerLive(spec) ? 'live' : ''}`}>
-																										{this.isPlayerLive(spec) ? '🔴 CURRENTLY LIVE' : '🟣 TWITCH'}
-																									</span>
-																									<span className="nospec-indicator"> (Twitch Only)</span>
-																								</div>
-																							)}
-																						</div>
-																						{this.state.hoveredPlayer === spec && (
-																							<div className="player-tooltip-container">
-																								{this.renderPlayerTooltip(spec)}
-																							</div>
+																							<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(spec)}
+																						</button>
+																						{this.isPlayerLive(spec) ? (
+																							<span className="live-indicator">🔴 CURRENTLY LIVE</span>
+																						) : (
+																							<span className="offline-indicator">⚫ CURRENTLY OFFLINE</span>
 																						)}
 																					</div>
-																				</td>
-																			</tr>
-																		))}
-																	</tbody>
-																</table>
+																				)}
+																			</div>
+																			
+																			{/* Tooltip */}
+																			{this.state.hoveredPlayer === spec && (
+																				<div className="player-tooltip-container">
+																					{this.renderPlayerTooltip(spec)}
+																				</div>
+																			)}
+																		</div>
+																	))}
+																</div>
 															</div>
 														)
 													}
@@ -1014,7 +1061,7 @@ isGTKServer() {
 											)}
 											
 											<div className="note m-t m-b" style={{ fontSize: '0.75rem', marginTop: '8px' }}>
-												Click on the player name to spectate that person. Players with 🙏 have nospec enabled.
+												Players with 🙏 have nospec enabled.
 												<div style={{ marginTop: '4px', fontSize: '0.7rem', opacity: '0.8' }}>
 													Showing {playersWithScores.length} players from serverstate{this.state.hasSpectatorData ? ' (enhanced with API data)' : ' (real-time data only)'}.
 												</div>

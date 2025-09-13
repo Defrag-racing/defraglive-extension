@@ -1235,6 +1235,7 @@ body {
     align-items: stretch;
     box-sizing: border-box;
     user-select: none;
+    overflow: hidden;
 
     a {
         text-decoration: none;
@@ -1253,6 +1254,67 @@ body {
     width: 100%;
     border-radius: 5px;
     padding: 15px;
+    height: calc(100vh - 140px);
+    overflow-y: auto;
+    
+    // Custom scrollbar for the ENTIRE playerlist content
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 3px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+        background: rgba(128, 128, 128, 0.3);
+        border-radius: 3px;
+        
+        &:hover {
+            background: rgba(128, 128, 128, 0.5);
+        }
+    }
+    
+    // Show scrollbar track on hover
+    &:hover::-webkit-scrollbar-track {
+        background: rgba(128, 128, 128, 0.1);
+    }
+    
+    &:hover::-webkit-scrollbar-thumb {
+        background: rgba(128, 128, 128, 0.4);
+    }
+    
+    // Firefox
+    scrollbar-width: thin;
+    scrollbar-color: rgba(128, 128, 128, 0.3) transparent;
+    
+    // Hide ALL inner scrollbars - only the main one should be visible
+    .players-list,
+    .players-list *,
+    * {
+        &::-webkit-scrollbar {
+            display: none !important;
+        }
+        scrollbar-width: none !important;
+        -ms-overflow-style: none !important;
+    }
+    
+    // But keep the main scrollbar visible
+    &::-webkit-scrollbar {
+        width: 6px !important;
+        display: block !important;
+    }
+    
+    // Add white outline to black text for better readability
+    .qcolor0, // Black color code ^0
+    [style*="color: black"],
+    [style*="color: #000"],
+    [style*="color: #000000"] {
+        -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.8) !important;
+        text-stroke: 0.5px rgba(255, 255, 255, 0.8) !important;
+    }
+    
     a {
         text-decoration: none;
         font-weight: 500;
@@ -1399,8 +1461,8 @@ body {
     }
 
     .server-info-section {
-        margin-bottom: 15px;
-        padding-bottom: 15px;
+        margin-bottom: 4px;
+        padding-bottom: 4px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         
         .server-details {
@@ -1604,7 +1666,6 @@ body {
     transition: transform $duration-fast02 $motion-entrance-productive;
     box-shadow: rgba(0, 0, 0, 0.2) 5px 5px 20px;
     width: 100%;
-    overflow: auto;
     border-radius: 5px;
     padding: 15px;
 
@@ -2406,9 +2467,10 @@ body {
 }
 
 .players-list {
-    max-height: 300px;
-    overflow-y: auto;
-    padding-right: 10px;
+    padding-right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .servers-table {
@@ -3999,6 +4061,615 @@ body {
     }
 }
 
+@keyframes live-glow {
+    0% {
+        box-shadow: 0 0 8px rgba(255, 68, 68, 0.5), 0 0 20px rgba(255, 68, 68, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 68, 68, 0.8), 0 0 35px rgba(255, 68, 68, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 8px rgba(255, 68, 68, 0.5), 0 0 20px rgba(255, 68, 68, 0.2);
+    }
+}
+
+@keyframes live-shimmer {
+    0% {
+        left: -100%;
+    }
+    50% {
+        left: 100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* Modern PlayerList Styling */
+.modern-player-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    transition: all 0.3s ease;
+    
+    .modern-player-name-section {
+        font-weight: 600;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: rgba(255, 255, 255, 0.95);
+    }
+}
+
+.modern-twitch-buttons-section {
+    margin-top: 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255,255,255,0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.modern-nospec-indicator {
+    display: block;
+    text-align: center;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 8px;
+    font-style: italic;
+}
+
+/* Compact PlayerList Styling */
+.compact-server-info {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    
+    .server-row, .map-row {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin: 2px 0;
+    }
+    
+    .server-name {
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+    
+    .map-info {
+        color: rgba(255, 255, 255, 0.8);
+        flex-shrink: 0;
+        
+        .map-link {
+            color: #3b82f6;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s ease;
+            padding: 2px 0;
+            margin-left: 4px;
+            
+            &:hover {
+                color: #2563eb;
+                border-bottom-color: #3b82f6;
+                text-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+            }
+            
+            &:active {
+                transform: scale(0.98);
+            }
+        }
+    }
+    
+    .copy-btn {
+        background: rgba(102, 126, 234, 0.2);
+        border: none;
+        border-radius: 4px;
+        padding: 2px 6px;
+        color: #667eea;
+        font-size: 0.7rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        
+        &:hover {
+            background: rgba(102, 126, 234, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        &:active {
+            transform: translateY(0) scale(0.95);
+            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+            background: rgba(102, 126, 234, 0.4);
+        }
+        
+        &.copied {
+            background: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+            
+            &:active {
+                background: rgba(34, 197, 94, 0.4);
+            }
+        }
+    }
+}
+
+.help-section {
+    margin-bottom: 8px;
+    
+    .help-text {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+
+.players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.player-item {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 6px;
+    transition: all 0.2s ease;
+    margin-bottom: 2px;
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.04);
+        transform: translateY(-1px);
+    }
+}
+
+.spectator-item {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 2px 0 1px 74px; // Align with player nickname position
+    border-left: 2px solid rgba(100, 200, 255, 0.3);
+    transition: all 0.2s ease;
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-left-color: rgba(100, 200, 255, 0.5);
+    }
+}
+
+.player-main-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.spectator-main-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.compact-spectate-btn {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    border: 1px solid rgba(5, 150, 105, 0.2);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    text-transform: none;
+    letter-spacing: 0.2px;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.15);
+    
+    &:before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.4s ease;
+    }
+    
+    &:hover {
+        transform: translateY(-1px) scale(1.02);
+        box-shadow: 0 3px 8px rgba(5, 150, 105, 0.25);
+        background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+        border-color: rgba(5, 150, 105, 0.3);
+    }
+    
+    &:active {
+        transform: translateY(0) scale(0.98);
+        box-shadow: 0 1px 4px rgba(5, 150, 105, 0.2);
+        background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
+        
+        &:before {
+            width: 100px;
+            height: 100px;
+            opacity: 0;
+        }
+    }
+    
+    &.cooldown {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        border-color: rgba(107, 114, 128, 0.2);
+        color: rgba(255, 255, 255, 0.6);
+        cursor: not-allowed;
+        
+        &:hover, &:active {
+            transform: none;
+            box-shadow: 0 1px 3px rgba(107, 114, 128, 0.15);
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        }
+    }
+}
+
+.player-info, .spectator-info {
+    flex: 1;
+    min-width: 120px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.compact-twitch-section {
+    display: flex;
+    align-items: flex-start;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.live-indicator {
+    font-size: 0.6rem;
+    animation: live-pulse 2s infinite;
+    color: #22c55e;
+    font-weight: 600;
+    margin-left: 4px; // Align with nickname position
+    align-self: flex-start;
+}
+
+.offline-indicator {
+    font-size: 0.6rem;
+    color: #6b7280;
+    font-weight: 600;
+    margin-left: 4px; // Align with nickname position  
+    align-self: flex-start;
+}
+
+.compact-twitch-btn {
+    background: linear-gradient(135deg, rgba(145, 70, 255, 0.6) 0%, rgba(100, 65, 165, 0.6) 100%);
+    border: 1px solid rgba(145, 70, 255, 0.2);
+    border-radius: 6px;
+    padding: 3px 6px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    min-width: 90px; // Match typical spectate button width
+    flex-shrink: 0;
+    text-align: left;
+    opacity: 0.8;
+    
+    .twitch-logo {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        margin-right: 4px;
+        filter: brightness(0) saturate(100%) invert(52%) sepia(89%) saturate(3314%) hue-rotate(260deg) brightness(101%) contrast(105%);
+    }
+    
+    &:before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.3s ease;
+    }
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(145, 70, 255, 0.4);
+        border-color: rgba(145, 70, 255, 0.5);
+    }
+    
+    &:active {
+        transform: translateY(0) scale(0.95);
+        box-shadow: 0 2px 8px rgba(145, 70, 255, 0.3);
+        
+        &:before {
+            width: 150px;
+            height: 150px;
+            opacity: 0;
+        }
+    }
+    
+    &.live {
+        background: linear-gradient(135deg, #9146ff 0%, #6441a5 100%);
+        border-color: rgba(145, 70, 255, 0.4);
+        box-shadow: 0 0 8px rgba(145, 70, 255, 0.3);
+        
+        .twitch-logo {
+            filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(103%) contrast(103%);
+        }
+    }
+    
+    &.offline {
+        background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+        border-color: rgba(75, 85, 99, 0.3);
+        
+        .twitch-logo {
+            filter: brightness(0) saturate(100%) invert(61%) sepia(8%) saturate(378%) hue-rotate(180deg) brightness(94%) contrast(88%);
+        }
+        
+        &:hover {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+            border-color: rgba(107, 114, 128, 0.4);
+            box-shadow: 0 4px 12px rgba(75, 85, 99, 0.3);
+        }
+    }
+}
+
+.spectators-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.free-spectators {
+    margin-top: 16px;
+    
+    .header {
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+    }
+}
+
+.request-spectate-btn {
+    background: rgba(255, 165, 0, 0.2);
+    border: none;
+    border-radius: 4px;
+    padding: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    
+    &:before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.3s ease;
+    }
+    
+    &:hover {
+        background: rgba(255, 165, 0, 0.3);
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(255, 165, 0, 0.3);
+    }
+    
+    &:active {
+        transform: scale(0.95);
+        background: rgba(255, 165, 0, 0.4);
+        
+        &:before {
+            width: 100px;
+            height: 100px;
+            opacity: 0;
+        }
+    }
+    
+    &.cooldown {
+        opacity: 0.5;
+        cursor: not-allowed;
+        
+        &:hover, &:active {
+            transform: none;
+            box-shadow: none;
+        }
+    }
+}
+
+.spectator-indicator, .nospec-indicator {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-left: 8px;
+}
+
+.spectator-eye {
+    margin-right: 4px;
+    opacity: 0.9;
+    font-size: 0.9rem;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+    display: inline-block;
+    animation: spectator-pulse 3s infinite ease-in-out;
+}
+
+@keyframes spectator-pulse {
+    0%, 100% { 
+        opacity: 0.9; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.6; 
+        transform: scale(0.95);
+    }
+}
+
+/* Reduce spacing between sections */
+.twitch-explanation {
+    margin-bottom: 2px;
+}
+
+/* Compact Header Styling */
+.compact-header {
+    padding: 8px 12px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 8px;
+    
+    .header-controls {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-start;
+        align-items: center;
+        width: 100%;
+        
+        .refresh-btn, .afk-btn {
+            order: 1;
+        }
+        
+        .close-btn {
+            order: 2;
+            margin-left: auto;
+        }
+    }
+}
+
+.compact-header-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    
+    &:before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: all 0.25s ease;
+    }
+    
+    &:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    &:active {
+        transform: translateY(0) scale(0.95);
+        
+        &:before {
+            width: 200px;
+            height: 200px;
+            opacity: 0;
+        }
+    }
+    
+    &.refresh-btn {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: rgba(16, 185, 129, 0.3);
+        
+        &:hover {
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+        
+        &:active {
+            transform: translateY(0) scale(0.95);
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+        }
+    }
+    
+    &.afk-btn {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        border-color: rgba(245, 158, 11, 0.3);
+        
+        &:hover {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        }
+        
+        &:active {
+            transform: translateY(0) scale(0.95);
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+        }
+        
+        &.cooldown {
+            opacity: 0.5;
+            cursor: not-allowed;
+            
+            &:hover, &:active {
+                transform: none;
+                box-shadow: none;
+            }
+        }
+    }
+    
+    &.close-btn {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border-color: rgba(239, 68, 68, 0.3);
+        font-size: 0.9rem;
+        padding: 4px 8px;
+        
+        &:hover {
+            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+        
+        &:active {
+            transform: translateY(0) scale(0.95);
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+        }
+    }
+}
+
 /* Theme Support */
 .theme-light {
     .permission-popup {
@@ -4346,8 +5017,29 @@ button.connect-to-server-btn,
         
         .twitch-live-indicator {
             display: block;
-            font-size: 0.65rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 0;
             margin-bottom: 2px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            
+            // Default styling for non-live Twitch users (🟣 TWITCH) - ServerBrowser style
+            color: #9146ff;
+            background-color: rgba(145, 70, 255, 0.15);
+            border: 1px solid rgba(145, 70, 255, 0.4);
+            text-shadow: 0 0 6px rgba(145, 70, 255, 0.8);
+            box-shadow: 0 0 8px rgba(145, 70, 255, 0.3);
+            
+            // Enhanced styling for live streamers (🔴 LIVE) - ServerBrowser style
+            &.live {
+                color: #ff4444;
+                background-color: rgba(255, 68, 68, 0.2);
+                border: 1px solid rgba(255, 68, 68, 0.6);
+                animation: live-pulse 2s infinite;
+                text-shadow: 0 0 8px rgba(255, 68, 68, 0.9);
+                box-shadow: 0 0 12px rgba(255, 68, 68, 0.5);
+            }
         }
         
         .twitch-url {
@@ -4397,13 +5089,357 @@ button.connect-to-server-btn,
     }
 }
 
+/* ServerBrowser Twitch Integration Styling */
+.serverbrowser-content {
+    .twitch-info-section {
+        margin-top: 4px;
+        padding: 2px 4px;
+        background: rgba(145, 70, 255, 0.05);
+        border-radius: 4px;
+        border-left: 2px solid rgba(145, 70, 255, 0.3);
+        
+        .twitch-live-indicator {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 0;
+            margin-bottom: 2px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            
+            // Default styling for non-live Twitch users (🟣 TWITCH) - ServerBrowser style
+            color: #9146ff;
+            background-color: rgba(145, 70, 255, 0.15);
+            border: 1px solid rgba(145, 70, 255, 0.4);
+            text-shadow: 0 0 6px rgba(145, 70, 255, 0.8);
+            box-shadow: 0 0 8px rgba(145, 70, 255, 0.3);
+            
+            // Enhanced styling for live streamers (🔴 LIVE) - ServerBrowser style
+            &.live {
+                color: #ff4444;
+                background-color: rgba(255, 68, 68, 0.2);
+                border: 1px solid rgba(255, 68, 68, 0.6);
+                animation: live-pulse 2s infinite;
+                text-shadow: 0 0 8px rgba(255, 68, 68, 0.9);
+                box-shadow: 0 0 12px rgba(255, 68, 68, 0.5);
+            }
+        }
+        
+        .twitch-url {
+            font-size: 0.6rem;
+            color: #9146ff;
+            cursor: pointer;
+            text-decoration: underline;
+            
+            &:hover {
+                color: #b366ff;
+            }
+        }
+    }
+}
+
+/* Modern PlayerList Styling */
+.modern-twitch-explanation {
+    margin-bottom: 16px;
+    
+    .streamer-question {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 12px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            
+            &::before {
+                left: 100%;
+            }
+        }
+        
+        .question-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .hover-hint {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.8);
+            margin-left: 8px;
+            font-style: italic;
+        }
+    }
+    
+    .twitch-details-popup {
+        background: rgba(0,0,0,0.95);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 12px;
+        backdrop-filter: blur(10px);
+        animation: slideDown 0.3s ease-out;
+        
+        .detail-section {
+            margin-bottom: 16px;
+            
+            &:last-child {
+                margin-bottom: 0;
+            }
+            
+            h4 {
+                color: #667eea;
+                margin: 0 0 8px 0;
+                font-size: 0.9rem;
+                font-weight: 600;
+            }
+            
+            p {
+                margin: 4px 0;
+                font-size: 0.8rem;
+                line-height: 1.4;
+                color: rgba(255,255,255,0.9);
+                
+                strong {
+                    color: white;
+                }
+            }
+        }
+    }
+}
+
+.modern-server-info {
+    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    
+    .server-name-row, .server-map-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+    
+    .map-label {
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.7);
+        min-width: 40px;
+    }
+    
+    .modern-copy-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+        }
+        
+        &.copied {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            
+            .copy-text::after {
+                content: ' ✓';
+            }
+        }
+        
+        .copy-icon {
+            font-size: 0.9rem;
+        }
+    }
+}
+
+.modern-players-section {
+    background: rgba(0,0,0,0.4);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    
+    .modern-spectate-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 10px 16px;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin: 4px 0 8px 0;
+        display: block;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        &:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
+            
+            &::before {
+                left: 100%;
+            }
+        }
+        
+        &:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+    }
+    
+    .modern-twitch-live-btn {
+        background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 10px 16px;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin: 8px 0 4px 0;
+        animation: live-pulse 2s infinite, live-glow 3s infinite;
+        cursor: default;
+        display: block;
+        width: 100%;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: live-shimmer 3s infinite;
+        }
+    }
+    
+    .modern-twitch-offline-btn {
+        background: linear-gradient(135deg, #9146ff 0%, #6441a5 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 8px 16px;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin: 8px 0 4px 0;
+        cursor: default;
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .modern-twitch-url-btn {
+        background: linear-gradient(135deg, #1da1f2 0%, #0d8bd9 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 12px 16px;
+        color: white;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin: 4px 0;
+        display: block;
+        width: 100%;
+        text-align: left;
+        position: relative;
+        overflow: hidden;
+        
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.6s;
+        }
+        
+        &:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 30px rgba(29, 161, 242, 0.5);
+            
+            &::before {
+                left: 100%;
+            }
+        }
+        
+        &:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+        
+        &.live {
+            background: linear-gradient(135deg, #ff4444 0%, #ff6b6b 100%);
+            
+            &:hover {
+                box-shadow: 0 12px 30px rgba(255, 68, 68, 0.5);
+            }
+        }
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Twitch Explanation Styling */
 .twitch-explanation {
     background: rgba(145, 70, 255, 0.05);
     border: 1px solid rgba(145, 70, 255, 0.2);
     border-radius: 6px;
-    padding: 8px 12px;
-    margin-bottom: 12px;
+    padding: 2px 6px;
+    margin-bottom: 3px;
     
     .explanation-title {
         font-size: 0.75rem;
