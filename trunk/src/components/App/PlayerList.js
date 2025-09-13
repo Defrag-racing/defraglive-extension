@@ -44,6 +44,7 @@ class PlayerListBase extends React.Component {
 			hoveredPlayer: null,
 			hoveredHelp: null,
 			requestCooldowns: new Map(),
+			politeRequestCooldowns: new Map(),
 			afkControlCooldown: 0,
 			copySuccess: null,
 			currentServerAddress: null,
@@ -167,10 +168,58 @@ class PlayerListBase extends React.Component {
     getSpectateCooldown(id) {
         const cooldown = this.state.spectateCooldowns.get(id)
         if (!cooldown) return 0
-        
+
         const elapsed = Date.now() - cooldown.startTime
         const remaining = Math.max(0, cooldown.duration - elapsed)
         return Math.ceil(remaining / 1000) // Return seconds
+    }
+
+    // Get remaining AFK cooldown time in seconds
+    getAfkCooldown() {
+        if (Date.now() >= this.state.afkControlCooldown) return 0
+
+        const remaining = this.state.afkControlCooldown - Date.now()
+        return Math.ceil(remaining / 1000) // Return seconds
+    }
+
+    // Get remaining polite request cooldown time for a player in seconds
+    getPoliteRequestCooldown(playerName) {
+        const cooldown = this.state.politeRequestCooldowns.get(playerName)
+        if (!cooldown) return 0
+
+        const elapsed = Date.now() - cooldown.startTime
+        const remaining = Math.max(0, cooldown.duration - elapsed)
+        return Math.ceil(remaining / 1000) // Return seconds
+    }
+
+    // Handle polite spectate request with 5-minute cooldown
+    handlePoliteRequest(playerName) {
+        if (this.props.twitchUser.role == 'guest') {
+            return
+        }
+
+        // Check if this specific player request is on cooldown
+        if (this.state.politeRequestCooldowns.has(playerName)) {
+            return
+        }
+
+        // Add this player to polite request cooldown (5 minutes = 300000ms)
+        const newCooldowns = new Map(this.state.politeRequestCooldowns)
+        newCooldowns.set(playerName, { startTime: Date.now(), duration: 300000 })
+        this.setState({ politeRequestCooldowns: newCooldowns })
+
+        // Send the request command
+        this.props.sendCommand({
+            'action': 'spectate_request',
+            'value': playerName
+        })
+
+        // Set timeout to remove cooldown after 5 minutes
+        setTimeout(() => {
+            const updatedCooldowns = new Map(this.state.politeRequestCooldowns)
+            updatedCooldowns.delete(playerName)
+            this.setState({ politeRequestCooldowns: updatedCooldowns })
+        }, 300000)
     }
 
     spectatePlayerID(id) {
@@ -284,20 +333,37 @@ class PlayerListBase extends React.Component {
     }
 
     updateCooldowns() {
-        const newCooldowns = new Map()
-        let hasChanges = false
-        
+        const newSpectateCooldowns = new Map()
+        const newPoliteRequestCooldowns = new Map()
+        let hasSpecChanges = false
+        let hasPoliteChanges = false
+
+        // Update spectate cooldowns
         for (const [id, cooldown] of this.state.spectateCooldowns) {
             const elapsed = Date.now() - cooldown.startTime
             if (elapsed < cooldown.duration) {
-                newCooldowns.set(id, cooldown)
+                newSpectateCooldowns.set(id, cooldown)
             } else {
-                hasChanges = true
+                hasSpecChanges = true
             }
         }
-        
-        if (hasChanges) {
-            this.setState({ spectateCooldowns: newCooldowns })
+
+        // Update polite request cooldowns
+        for (const [playerName, cooldown] of this.state.politeRequestCooldowns) {
+            const elapsed = Date.now() - cooldown.startTime
+            if (elapsed < cooldown.duration) {
+                newPoliteRequestCooldowns.set(playerName, cooldown)
+            } else {
+                hasPoliteChanges = true
+            }
+        }
+
+        if (hasSpecChanges) {
+            this.setState({ spectateCooldowns: newSpectateCooldowns })
+        }
+
+        if (hasPoliteChanges) {
+            this.setState({ politeRequestCooldowns: newPoliteRequestCooldowns })
         }
     }
 
@@ -662,6 +728,7 @@ isGTKServer() {
 		)
 
 		const isOnAfkCooldown = Date.now() < this.state.afkControlCooldown
+		const afkCooldownSeconds = this.getAfkCooldown()
 
 		// Use server data from API calls or fallback to serverstate
 		const serverAddress = this.state.currentServerAddress || this.props.serverstate.ip || 'Unknown'
@@ -690,21 +757,21 @@ isGTKServer() {
 								>
 									Refresh
 								</button>
-								<button 
+								<button
 									className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
 									onClick={this.handleAfkReset}
 									disabled={isOnAfkCooldown}
-									title="Reset AFK timer"
+									title={isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : "Reset AFK timer"}
 								>
-									Reset AFK
+									{isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : 'Reset AFK'}
 								</button>
-								<button 
+								<button
 									className={`compact-header-btn afk-btn ${isOnAfkCooldown ? 'cooldown' : ''}`}
 									onClick={this.handleAfkExtend}
 									disabled={isOnAfkCooldown}
-									title="Extend AFK timer by 5 minutes"
+									title={isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : "Extend AFK timer by 5 minutes"}
 								>
-									+5 min
+									{isOnAfkCooldown ? `Wait ${afkCooldownSeconds}s` : 'Extend AFK by 5min'}
 								</button>
 								<button 
 									className="compact-header-btn close-btn" 
@@ -748,13 +815,6 @@ isGTKServer() {
 							<div className="server-row">
 								<span className="server-name"><Q3STR s={serverName}/></span>
 								<button
-									className={`copy-btn ${this.state.copySuccess === serverAddress ? 'copied' : ''}`}
-									onClick={() => this.copyToClipboard(serverAddress)}
-									title={`Copy IP: ${serverAddress}`}
-								>
-									📋 Copy IP
-								</button>
-								<button
 									className="play-btn"
 									onClick={() => {
 										try {
@@ -773,8 +833,8 @@ isGTKServer() {
 								</button>
 							</div>
 							<div className="map-row">
-								<span className="map-info">Map: 
-									<a 
+								<span className="map-info">Map:
+									<a
 										href={`https://defrag.racing/maps/${serverMap}`}
 										target="_blank"
 										rel="noopener noreferrer"
@@ -784,13 +844,22 @@ isGTKServer() {
 										<Q3STR s={serverMap}/>
 									</a>
 								</span>
-								<button 
-									className={`copy-btn ${this.state.copySuccess === serverMap ? 'copied' : ''}`}
-									onClick={() => this.copyToClipboard(serverMap)}
-									title="Copy map name"
-								>
-									📋
-								</button>
+								<div className="copy-buttons">
+									<button
+										className={`copy-btn ${this.state.copySuccess === serverAddress ? 'copied' : ''}`}
+										onClick={() => this.copyToClipboard(serverAddress)}
+										title={`Copy IP: ${serverAddress}`}
+									>
+										📋 Copy IP
+									</button>
+									<button
+										className={`copy-btn ${this.state.copySuccess === serverMap ? 'copied' : ''}`}
+										onClick={() => this.copyToClipboard(serverMap)}
+										title="Copy map name"
+									>
+										📋 Copy MAP
+									</button>
+								</div>
 							</div>
 						</div>
 
@@ -813,7 +882,7 @@ isGTKServer() {
 													</span>
 													{this.state.hoveredHelp === 'player' && (
 														<div className="help-tooltip">
-															Use spectate buttons to spectate players. Players with 🙏 have nospec enabled. Data shows real-time serverstate info{this.state.hasSpectatorData ? ' enhanced with API data' : ''}.
+															Use spectate buttons to spectate players. Data shows real-time serverstate info{this.state.hasSpectatorData ? ' enhanced with API data' : ''}.
 														</div>
 													)}
 												</span>
@@ -852,17 +921,19 @@ isGTKServer() {
 														
 														const canSpectate = this.canSpectatePlayer(player)
 														const isOnCooldown = this.isOnCooldown(player.n)
+														const politeRequestCooldownSeconds = this.getPoliteRequestCooldown(player.n)
+														const isOnPoliteRequestCooldown = politeRequestCooldownSeconds > 0
 														
 														return (
 															<React.Fragment key={`player-${player.id || player.clientId}`}>
 																<div className="player-item">
 																	<div className="player-main-row">
-																		{canSpectate && !this.hasNospecTwitch(player) && (() => {
+																		{canSpectate && !this.hasNospecTwitch(player) ? (() => {
 																			const cooldownSeconds = this.getSpectateCooldown(player.id)
 																			const isOnCooldown = cooldownSeconds > 0
-																			
+
 																			return (
-																				<button 
+																				<button
 																					className={`compact-spectate-btn ${isOnCooldown ? 'cooldown' : ''}`}
 																					onClick={() => !isOnCooldown && this.spectatePlayerID(player.id)}
 																					disabled={isOnCooldown}
@@ -871,8 +942,22 @@ isGTKServer() {
 																					{isOnCooldown ? `Wait ${cooldownSeconds}s` : 'Click to spectate'}
 																				</button>
 																			)
-																		})()}
-																		<div 
+																		})() : !canSpectate && player.t !== '3' && player.follow_num === -1 && !this.getTwitchUsername(player) ? (
+																			<button className="compact-spectate-btn disabled" disabled title="This player has spectating disabled">
+																				No Spectating
+																			</button>
+																		) : this.hasNospecTwitch(player) ? (
+																			<button
+																				className={`compact-twitch-btn tall ${this.isPlayerLive(player) ? 'live' : 'offline'}`}
+																				onClick={(e) => this.handleTwitchClick(player, e)}
+																				title={this.isPlayerLive(player) ? `Watch ${this.getTwitchUsername(player)} LIVE` : `Visit ${this.getTwitchUsername(player)}`}
+																			>
+																				<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(player)}
+																			</button>
+																		) : (
+																			<div className="spectate-placeholder"></div>
+																		)}
+																		<div
 																			className={`player-info ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''} ${this.getTwitchUsername(player) ? 'twitch-player' : ''}`}
 																			onMouseEnter={() => this.setState({ hoveredPlayer: player })}
 																			onMouseLeave={() => this.setState({ hoveredPlayer: null })}
@@ -884,12 +969,21 @@ isGTKServer() {
 																			{this.getPlayerStatus(player).length > 0 && (
 																				<span className="status-indicator">!</span>
 																			)}
+																			{this.hasNospecTwitch(player) && (
+																				<div className="nospec-live-indicator">
+																					{this.isPlayerLive(player) ? (
+																						<span className="live-indicator">🔴 CURRENTLY LIVE</span>
+																					) : (
+																						<span className="offline-indicator">⚫ CURRENTLY OFFLINE</span>
+																					)}
+																				</div>
+																			)}
 																		</div>
-																		
+
 																		{/* Compact Twitch buttons */}
-																		{this.getTwitchUsername(player) && (
+																		{this.getTwitchUsername(player) && !this.hasNospecTwitch(player) && (
 																			<div className="compact-twitch-section">
-																				<button 
+																				<button
 																					className={`compact-twitch-btn ${this.isPlayerLive(player) ? 'live' : 'offline'}`}
 																					onClick={(e) => this.handleTwitchClick(player, e)}
 																					title={this.isPlayerLive(player) ? `Watch ${this.getTwitchUsername(player)} LIVE` : `Visit ${this.getTwitchUsername(player)}`}
@@ -911,20 +1005,7 @@ isGTKServer() {
 																		{!canSpectate && (player.t === '3' || player.follow_num !== -1) && (
 																			<span className="spectator-indicator">(Spectator)</span>
 																		)}
-																		{!canSpectate && player.t !== '3' && player.follow_num === -1 && !this.hasNospecTwitch(player) && !this.getTwitchUsername(player) && (
-																			<span className="nospec-indicator">(No Spectating)</span>
-																		)}
 																		
-																		{/* Request spectate button */}
-																		{!canSpectate && this.props.twitchUser.role !== 'guest' && (
-																			<button 
-																				className={`request-spectate-btn ${isOnCooldown ? 'cooldown' : ''}`}
-																				onClick={!isOnCooldown ? () => this.requestSpectate(player.n) : undefined}
-																				title={isOnCooldown ? "Please wait before requesting again" : "Politely request to spectate this player"}
-																			>
-																				🙏
-																			</button>
-																		)}
 																		
 																		{/* Tooltip */}
 																		{this.state.hoveredPlayer === player && (
@@ -933,6 +1014,18 @@ isGTKServer() {
 																			</div>
 																		)}
 																	</div>
+
+																	{/* Ask nicely button for nospec players */}
+																	{!canSpectate && player.t !== '3' && player.follow_num === -1 && !this.hasNospecTwitch(player) && !this.getTwitchUsername(player) && (
+																		<button
+																			className={`ask-nicely-btn ${isOnPoliteRequestCooldown ? 'cooldown' : ''}`}
+																			onClick={!isOnPoliteRequestCooldown ? () => this.handlePoliteRequest(player.n) : undefined}
+																			disabled={isOnPoliteRequestCooldown}
+																			title={isOnPoliteRequestCooldown ? `Please wait ${politeRequestCooldownSeconds}s before requesting again` : "Politely request spectating access from this player"}
+																		>
+																			{isOnPoliteRequestCooldown ? `🙏 Wait ${Math.floor(politeRequestCooldownSeconds / 60)}:${(politeRequestCooldownSeconds % 60).toString().padStart(2, '0')}` : '🙏 Politely request spectating access'}
+																		</button>
+																	)}
 																	
 																	{/* Spectators following this player */}
 																	{followingSpecs.map((spec) => (
@@ -1078,8 +1171,7 @@ isGTKServer() {
 											)}
 											
 											<div className="note m-t m-b" style={{ fontSize: '0.75rem', marginTop: '8px' }}>
-												Players with 🙏 have nospec enabled.
-												<div style={{ marginTop: '4px', fontSize: '0.7rem', opacity: '0.8' }}>
+												<div style={{ fontSize: '0.7rem', opacity: '0.8' }}>
 													Showing {playersWithScores.length} players from serverstate{this.state.hasSpectatorData ? ' (enhanced with API data)' : ' (real-time data only)'}.
 												</div>
 											</div>
