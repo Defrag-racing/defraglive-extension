@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest",
     "build": "webpack --mode production",
+    "build:zip": "webpack --mode production && powershell Compress-Archive -Path ./dist/* -DestinationPath ./dist.zip -Force",
     "start": "webpack-dev-server --mode development",
     "cert": "./bin/generate_cert.sh server",
     "host": "webpack-dev-server --mode development --devrig"

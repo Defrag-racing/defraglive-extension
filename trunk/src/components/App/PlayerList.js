@@ -747,12 +747,29 @@ isGTKServer() {
 						<div className="compact-server-info">
 							<div className="server-row">
 								<span className="server-name"><Q3STR s={serverName}/></span>
-								<button 
+								<button
 									className={`copy-btn ${this.state.copySuccess === serverAddress ? 'copied' : ''}`}
 									onClick={() => this.copyToClipboard(serverAddress)}
 									title={`Copy IP: ${serverAddress}`}
 								>
 									📋 Copy IP
+								</button>
+								<button
+									className="play-btn"
+									onClick={() => {
+										try {
+											window.open(`defrag://${serverAddress}`, '_blank')
+										} catch (e) {
+											// Fallback: try direct navigation
+											window.location.href = `defrag://${serverAddress}`
+										}
+									}}
+									title={`Play on server: ${serverAddress}`}
+								>
+									<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+										<path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/>
+									</svg>
+									Play
 								</button>
 							</div>
 							<div className="map-row">
