@@ -4677,22 +4677,12 @@ body {
         line-height: 1.2;
     }
 
-    .twitch-logo {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        margin-right: 4px;
-        filter: brightness(0) saturate(100%) invert(52%) sepia(89%) saturate(3314%) hue-rotate(260deg) brightness(101%) contrast(105%);
-    }
 
     &:hover {
         background: linear-gradient(135deg, rgba(145, 70, 255, 1) 0%, rgba(100, 65, 165, 1) 100%);
         border-color: rgba(145, 70, 255, 1);
         box-shadow: 0 4px 12px rgba(145, 70, 255, 0.4);
 
-        .twitch-logo {
-            filter: brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(0%) hue-rotate(93deg) brightness(110%) contrast(110%);
-        }
     }
 
     &.offline {
@@ -4701,9 +4691,6 @@ body {
         color: rgba(255, 255, 255, 0.9);
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 
-        .twitch-logo {
-            filter: brightness(0) saturate(100%) invert(61%) sepia(8%) saturate(378%) hue-rotate(180deg) brightness(94%) contrast(88%);
-        }
 
         &:hover {
             background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
