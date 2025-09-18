@@ -52,6 +52,15 @@ body {
     font-family: 'Inter', Roobert, 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+// Mobile background styling - apply to the app wrapper
+.isMobile-true {
+    background-color: rgba(30, 30, 35, 0.95);
+    background-image: url('../img/q3logo_20p.png');
+    background-repeat: repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+}
+
 // Original Quake 3 color codes (corrected with proper hex values)
 .qcolor0 { color: #000000; } // ^0: black
 .qcolor1 { color: #fe0000; } // ^1: red  
