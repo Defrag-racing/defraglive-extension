@@ -1010,6 +1010,15 @@ body {
         }
     }
 
+    // Fix NotifyLines formatting to preserve exact spacing like console
+    .line-wrap .message {
+        white-space: pre-wrap;
+        overflow: visible;
+        text-overflow: unset;
+        word-break: break-word;
+        font-family: 'Courier New', 'Lucida Console', monospace;
+    }
+
     .qcolor0 {
         text-shadow: rgba(255, 255, 255, 0.6) 1px 1px 0px;
     }

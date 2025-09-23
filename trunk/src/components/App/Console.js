@@ -583,7 +583,7 @@ class ConsoleBase extends React.Component {
 
         this.setState(prevState => {
             const updatedMessages = [...prevState.messages, new_msg]
-            const updatedNotif = new_msg.type === 'SAY' ? [...prevState.messages_notif, new_msg] : prevState.messages_notif
+            const updatedNotif = [...prevState.messages_notif, new_msg]
             if (prevState.scrolledUp) {
                 return {
                     messages: updatedMessages,
@@ -593,7 +593,7 @@ class ConsoleBase extends React.Component {
             }
             return {
                 messages: updatedMessages,
-                messages_notif: updatedNotif.length > 3 ? updatedNotif.slice(-3) : updatedNotif
+                messages_notif: updatedNotif.length > 8 ? updatedNotif.slice(-8) : updatedNotif
             }
         }, () => {
             if (this.scrollerEl.current && !this.state.scrolledUp) {
