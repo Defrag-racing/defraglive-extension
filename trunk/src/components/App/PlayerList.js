@@ -3,6 +3,7 @@ import { Q3STR } from '../../partials/Quake3'
 import { mapDispatch, mapState } from './State'
 import { connect } from 'react-redux'
 import { BOT_CONFIG } from '../../botConfig';
+import twitchLogo from '../../img/twitch-logo.svg';
 
 const SV_TYPE = {
     '0': 'auto',
@@ -996,7 +997,7 @@ isGTKServer() {
 																				onClick={(e) => this.handleTwitchClick(player, e)}
 																				title={this.isPlayerLive(player) ? `Watch ${this.getTwitchUsername(player)} LIVE` : `Visit ${this.getTwitchUsername(player)}`}
 																			>
-																				 {this.getTwitchUsername(player)}
+																				<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(player)}
 																			</button>
 																		) : (
 																			<div className="spectate-placeholder"></div>
@@ -1032,7 +1033,7 @@ isGTKServer() {
 																					onClick={(e) => this.handleTwitchClick(player, e)}
 																					title={this.isPlayerLive(player) ? `Watch ${this.getTwitchUsername(player)} LIVE` : `Visit ${this.getTwitchUsername(player)}`}
 																				>
-																					 {this.getTwitchUsername(player)}
+																					<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(player)}
 																				</button>
 																				{this.isPlayerLive(player) ? (
 																					<span className="live-indicator">🔴 CURRENTLY LIVE</span>
@@ -1094,7 +1095,7 @@ isGTKServer() {
 																						onClick={(e) => this.handleTwitchClick(spec, e)}
 																						title={this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE` : `Visit ${this.getTwitchUsername(spec)}`}
 																					>
-																						 {this.getTwitchUsername(spec)}
+																						<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(spec)}
 																					</button>
 																					{this.isPlayerLive(spec) ? (
 																						<span className="live-indicator">🔴 CURRENTLY LIVE</span>
@@ -1187,7 +1188,7 @@ isGTKServer() {
 																							onClick={(e) => this.handleTwitchClick(spec, e)}
 																							title={this.isPlayerLive(spec) ? `Watch ${this.getTwitchUsername(spec)} LIVE` : `Visit ${this.getTwitchUsername(spec)}`}
 																						>
-																							 {this.getTwitchUsername(spec)}
+																							<img src={twitchLogo} alt="Twitch" className="twitch-logo" /> {this.getTwitchUsername(spec)}
 																						</button>
 																						{this.isPlayerLive(spec) ? (
 																							<span className="live-indicator">🔴 CURRENTLY LIVE</span>
