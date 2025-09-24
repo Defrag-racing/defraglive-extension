@@ -378,7 +378,12 @@ body {
         }
 
         .qcolor0 {
-            text-shadow: rgba(255, 255, 255, 0.2) 1px 1px 0px;
+            text-shadow:
+                -1px -1px 0 rgba(255, 255, 255, 0.6),
+                1px -1px 0 rgba(255, 255, 255, 0.6),
+                -1px 1px 0 rgba(255, 255, 255, 0.6),
+                1px 1px 0 rgba(255, 255, 255, 0.6),
+                0 0 2px rgba(255, 255, 255, 0.4);
         }
 
         .mod-wrap {
@@ -1020,7 +1025,12 @@ body {
     }
 
     .qcolor0 {
-        text-shadow: rgba(255, 255, 255, 0.6) 1px 1px 0px;
+        text-shadow:
+            -1px -1px 0 rgba(255, 255, 255, 0.6),
+            1px -1px 0 rgba(255, 255, 255, 0.6),
+            -1px 1px 0 rgba(255, 255, 255, 0.6),
+            1px 1px 0 rgba(255, 255, 255, 0.6),
+            0 0 2px rgba(255, 255, 255, 0.4);
     }
 }
 
@@ -1342,8 +1352,12 @@ body {
     [style*="color: black"],
     [style*="color: #000"],
     [style*="color: #000000"] {
-        -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.8) !important;
-        text-stroke: 0.5px rgba(255, 255, 255, 0.8) !important;
+        text-shadow:
+            -1px -1px 0 rgba(255, 255, 255, 0.6),
+            1px -1px 0 rgba(255, 255, 255, 0.6),
+            -1px 1px 0 rgba(255, 255, 255, 0.6),
+            1px 1px 0 rgba(255, 255, 255, 0.6),
+            0 0 2px rgba(255, 255, 255, 0.4) !important;
     }
     
     a {
@@ -5307,7 +5321,7 @@ html {
     
     /* White outline specifically for black text in spectated player names */
     .qcolor0 {
-        text-shadow: 
+        text-shadow:
             -1px -1px 0 #ffffff,
             1px -1px 0 #ffffff,
             -1px 1px 0 #ffffff,
