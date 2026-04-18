@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Q3STR } from '../../partials/Quake3'
+import { filterAuthor, filterMessage } from '../../util/NickFilter'
 import { BOT_CONFIG } from '../../botConfig'
 
 // Global translation cache - shared across all Row components
@@ -169,9 +170,9 @@ export default function Row(props) {
 						{props.data.time}
 						{moderation}
 					</div>
-					<div className="col player-name"><Q3STR s={props.data.author}/>:</div>
+					<div className="col player-name"><Q3STR s={filterAuthor(props.data.author)}/>:</div>
 					<div className="col message">
-						<Q3STR s={isTranslated ? translatedText : props.data.content}/>
+						<Q3STR s={filterMessage(isTranslated ? translatedText : props.data.content)}/>
 						<button 
 							className="translate-btn" 
 							onClick={translateMessage}
@@ -198,7 +199,7 @@ export default function Row(props) {
             return (
                 <div className="row -announce">
                     <div className="col timestamp">{props.data.time}</div>
-                    <div className="col message"><Q3STR s={props.data.content}/></div>
+                    <div className="col message"><Q3STR s={filterMessage(props.data.content)}/></div>
                 </div>
             )
     }
@@ -218,8 +219,8 @@ export function RowNotify(props) {
         case 'SAY':
             return (
                 <div className="line-wrap">
-                    <div className="player-name"><Q3STR s={props.data.author}/>:</div>
-                    <div className="message"><Q3STR s={props.data.content}/></div>
+                    <div className="player-name"><Q3STR s={filterAuthor(props.data.author)}/>:</div>
+                    <div className="message"><Q3STR s={filterMessage(props.data.content)}/></div>
                 </div>
             )
         // case 'PRINT':
@@ -232,7 +233,7 @@ export function RowNotify(props) {
         default:
             return (
                 <div className="line-wrap">
-                    <div className="message"><Q3STR s={props.data.content}/></div>
+                    <div className="message"><Q3STR s={filterMessage(props.data.content)}/></div>
                 </div>
             )
     }

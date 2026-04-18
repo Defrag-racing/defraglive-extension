@@ -1,5 +1,6 @@
 import React from 'react'
 import { Q3STR } from '../../partials/Quake3'
+import { filterAuthor } from '../../util/NickFilter'
 import { mapDispatch, mapState } from './State'
 import { connect } from 'react-redux'
 import { BOT_CONFIG } from '../../botConfig';
@@ -682,7 +683,7 @@ isGTKServer() {
         
         return (
             <div className="player-tooltip">
-                <div className="tooltip-name"><Q3STR s={player.n}/></div>
+                <div className="tooltip-name"><Q3STR s={filterAuthor(player.n)}/></div>
                 <div className="tooltip-info">
                     <div>Role: {player.follow_num === -1 ? 'Player' : 'Spectator'}</div>
                     {player.time > 0 && <div>Best Time: {this.formatTime(player.time)}</div>}
@@ -1007,7 +1008,7 @@ isGTKServer() {
 																			onMouseEnter={() => this.setState({ hoveredPlayer: player })}
 																			onMouseLeave={() => this.setState({ hoveredPlayer: null })}
 																		>
-																			<Q3STR s={player.n}/>
+																			<Q3STR s={filterAuthor(player.n)}/>
 																			{player.time > 0 && (
 																				<span className="player-time"> ({this.formatTime(player.time)})</span>
 																			)}
@@ -1078,7 +1079,7 @@ isGTKServer() {
 																		<div className="spectator-main-row">
 																			<div className="spectator-info">
 																				<span className="spectator-eye">👁️</span>
-																				<Q3STR s={spec.n}/>
+																				<Q3STR s={filterAuthor(spec.n)}/>
 																				{spec.time > 0 && (
 																					<span className="player-time"> ({this.formatTime(spec.time)})</span>
 																				)}
@@ -1168,7 +1169,7 @@ isGTKServer() {
 																			<div className="spectator-main-row">
 																				<div className="spectator-info">
 																					<span className="spectator-eye">👁️</span>
-																					<Q3STR s={spec.n}/> 
+																					<Q3STR s={filterAuthor(spec.n)}/>
 																					<span className="spectating-info">
 																						{spec.dataSource === 'gtk-serverstate-only' ? 
 																							'(spectator unknown)' : 

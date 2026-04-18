@@ -1,5 +1,6 @@
 import React from 'react'
 import { Q3STR } from '../../partials/Quake3'
+import { filterAuthor } from '../../util/NickFilter'
 import { mapDispatch, mapState } from './State'
 import { connect } from 'react-redux'
 
@@ -609,7 +610,7 @@ class ServerBrowserBase extends React.Component {
         
         return (
             <div className="player-tooltip">
-                <div className="tooltip-name"><Q3STR s={player.name}/></div>
+                <div className="tooltip-name"><Q3STR s={filterAuthor(player.name)}/></div>
                 <div className="tooltip-info">
                     <div>Role: {player.follow_num === -1 ? 'Player' : 'Spectator'}</div>
                     {player.time > 0 && <div>Best Time: {this.formatTime(player.time)}</div>}
@@ -725,7 +726,7 @@ class ServerBrowserBase extends React.Component {
                                                 } : {})}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(player).length > 0 ? 'has-status' : ''}`}>
-                                                    <Q3STR s={player.name}/>
+                                                    <Q3STR s={filterAuthor(player.name)}/>
                                                     {player.time > 0 && (
                                                         <span className="player-time"> ({this.formatTime(player.time)})</span>
                                                     )}
@@ -763,7 +764,7 @@ class ServerBrowserBase extends React.Component {
                                                     } : {})}
                                                 >
                                                     <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
-                                                        👁️ <Q3STR s={spec.name}/>
+                                                        👁️ <Q3STR s={filterAuthor(spec.name)}/>
                                                         {this.getPlayerStatus(spec).length > 0 && (
                                                             <span className="status-indicator">!</span>
                                                         )}
@@ -804,7 +805,7 @@ class ServerBrowserBase extends React.Component {
                                                 } : {})}
                                             >
                                                 <span className={`player-name ${this.getPlayerStatus(spec).length > 0 ? 'has-status' : ''}`}>
-                                                    <Q3STR s={spec.name}/>
+                                                    <Q3STR s={filterAuthor(spec.name)}/>
                                                     {this.getPlayerStatus(spec).length > 0 && (
                                                         <span className="status-indicator">!</span>
                                                     )}
@@ -939,7 +940,7 @@ class ServerBrowserBase extends React.Component {
                                     <div key={player.clientId} className="player-group">
                                         <div className="player-item">
                                             <span className="player-name">
-                                                <Q3STR s={player.name}/>
+                                                <Q3STR s={filterAuthor(player.name)}/>
                                                 {player.time > 0 && (
                                                     <span className="player-time"> ({this.formatTime(player.time)})</span>
                                                 )}
@@ -948,7 +949,7 @@ class ServerBrowserBase extends React.Component {
                                         {followingSpecs.map((spec) => (
                                             <div key={spec.clientId} className="player-item spectator">
                                                 <span className="player-name">
-                                                    👁️ <Q3STR s={spec.name}/>
+                                                    👁️ <Q3STR s={filterAuthor(spec.name)}/>
                                                 </span>
                                             </div>
                                         ))}

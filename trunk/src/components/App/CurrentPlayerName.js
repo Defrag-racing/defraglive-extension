@@ -1,5 +1,6 @@
 import React from 'react'
 import { Q3STR } from '../../partials/Quake3'
+import { filterAuthor } from '../../util/NickFilter'
 import { mapDispatch, mapState } from './State'
 import { connect } from 'react-redux'
 
@@ -130,7 +131,7 @@ class CurrentPlayerNameBase extends React.Component {
         return (
             <div className="curr-player-wrap">
                 <span className="enhanced-nickname">
-                    <Q3STR s={displayName}/>
+                    <Q3STR s={filterAuthor(displayName)}/>
                 </span>
             </div>
         )
