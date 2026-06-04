@@ -11,14 +11,17 @@ import { SettingsPanel } from './SettingsPanel'
 import { unix2time } from '../../util/DateTime'
 import Message from '../../partials/StatusMessages'
 import extensionIcon from '../../img/ext-imge-70x70.png'
+import { initEcho, sendToWeb } from '../../util/webTransport'
 
 class ConsoleBase extends React.Component {
     constructor(props) {
         super(props)
 
-        // websocket server
+        // websocket server (legacy fields kept for the unchanged reconnect/
+        // translate guards; live transport is now Echo/Reverb via this.echo)
         this.ws = null
         this.ws_reconn_interval = null
+        this.echo = null
         
         this.state = {
             // format {type: 'info|success|warning|error', 'message': '<string>'}
@@ -173,16 +176,29 @@ class ConsoleBase extends React.Component {
     }
 
     initWebsocket() {
-        if(this.ws != null) {
-            this.ws.close(1000)
-            this.ws = null
+        // Live transport is now the web's Reverb channel (replaces the bridge
+        // WS). Echo/pusher-js manage their own reconnection, so the old manual
+        // reconnect intervals are no longer wired up.
+        if (this.echo != null) {
+            try { this.echo.leaveChannel('defraglive'); this.echo.disconnect() } catch (e) {}
+            this.echo = null
         }
-        
-        this.ws = new WebSocket("wss://tw.defrag.racing/ws")
-        this.ws.onmessage = this.onConsoleMessage
-        this.ws.onerror = this.onError
-        this.ws.onopen = this.onConnect
-        this.ws.onclose = this.onDisconnect
+
+        this.echo = initEcho()
+
+        // broadcastAs('stream') -> listen for '.stream'; payload is the same
+        // {action, message, ...} object the bridge relayed, so feed it to the
+        // unchanged onConsoleMessage (which expects an event-like {data}).
+        this.echo.channel('defraglive').listen('.stream', (payload) => {
+            this.onConsoleMessage({ data: JSON.stringify(payload) })
+        })
+
+        const conn = this.echo.connector && this.echo.connector.pusher && this.echo.connector.pusher.connection
+        if (conn) {
+            conn.bind('connected', () => this.setState({ status_message: null }))
+            conn.bind('disconnected', () => this.setState({ status_message: { 'type': 'warning', 'message': 'Disconnected. Reconnecting...' } }))
+            conn.bind('unavailable', () => this.setState({ status_message: { 'type': 'error', 'message': 'Connection unavailable. Reconnecting...' } }))
+        }
 
         this.setState({
             status_message: {
@@ -763,29 +779,15 @@ class ConsoleBase extends React.Component {
 	}
 
 	sendWS(msg) {
-		
-		if(!this.ws) {
-			// No WebSocket connection
-			return false
-		}
+		// Routed to the web API instead of a raw WS send. bot_secret comes from
+		// the live serverstate (same source PlayerList uses); the web gates
+		// bot-driving commands on it.
+		const botSecret = (this.props.serverstate && this.props.serverstate.bot_secret) || ''
 
-		let states = ['connecting', 'open', 'closing', 'closed']
-		if(this.ws.readyState !== 1) {
-			this.setState({
-				status_message: {
-					'type': 'error',
-					'message': `The connection is ${states[this.ws.readyState]}. Reconnecting...`,
-				}
-			}, () => {
-				this.ws_reconn_interval = setInterval(() => {
-					this.initWebsocket()
-				}, 4000)
-			})
-			return false
-		}
-
-		this.ws.send(JSON.stringify(msg))
-		return true
+		return sendToWeb(msg, botSecret, (settings) => {
+			// get_current_settings response -> same event SettingsPanel listens for.
+			window.dispatchEvent(new CustomEvent('current-settings', { detail: settings }))
+		})
 	}
 
     onSubmit(e) {

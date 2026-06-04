@@ -41,6 +41,8 @@
     "@rematch/core": "^2.2.0",
     "core-js": "^3.22.7",
     "jsonwebtoken": "^8.5.1",
+    "laravel-echo": "^1.16.1",
+    "pusher-js": "^8.4.0",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
     "sass": "^1.89.0"
