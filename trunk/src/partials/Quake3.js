@@ -2,7 +2,8 @@ import React from 'react'
 
 function sanitizeString(text) {
     var element = document.createElement('div')
-    element.innerText = text
+    // null/undefined would render as the literal string "null"/"undefined"
+    element.innerText = text == null ? '' : text
     return element.innerHTML
 }
 

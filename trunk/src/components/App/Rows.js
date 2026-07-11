@@ -11,7 +11,10 @@ export default function Row(props) {
 	const [translatedText, setTranslatedText] = useState('');
 	const [isTranslating, setIsTranslating] = useState(false);
 
-	const cleanText = props.data.content.replace(/\^./g, '');
+	// Bot messages can arrive with content: null (e.g. some game events) -
+	// never assume it is a string, one null used to crash the whole overlay.
+	const content = typeof props.data?.content === 'string' ? props.data.content : ''
+	const cleanText = content.replace(/\^./g, '');
 	const cacheKey = cleanText.trim().toLowerCase();
 
 	// ADD THIS: Listen for WebSocket translation results
@@ -115,7 +118,7 @@ export default function Row(props) {
                     {moderation}
                 </div>
                 <div className="col message map-error-message">
-                    <Q3STR s={props.data.content}/>
+                    <Q3STR s={content}/>
                     <div className="map-error-help">
                         The server is trying to load a missing map. This may resolve automatically.
                     </div>
@@ -133,7 +136,7 @@ export default function Row(props) {
                     {moderation}
                 </div>
                 <div className="col message map-countdown-message">
-                    <Q3STR s={props.data.content}/>
+                    <Q3STR s={content}/>
                     {props.data.countdown > 0 && (
                         <div className="countdown-progress">
                             <div className="progress-bar" style={{width: `${(props.data.countdown/60)*100}%`}}></div>
@@ -153,7 +156,7 @@ export default function Row(props) {
 					{moderation}
 				</div>
 				<div className="col message connection-error-message">
-					<Q3STR s={props.data.content}/>
+					<Q3STR s={content}/>
 					<div className="connection-error-help">
 						Connection lost. Your recent messages may not have been sent.
 					</div>
@@ -172,7 +175,7 @@ export default function Row(props) {
 					</div>
 					<div className="col player-name"><Q3STR s={filterAuthor(props.data.author)}/>:</div>
 					<div className="col message">
-						<Q3STR s={filterMessage(isTranslated ? translatedText : props.data.content)}/>
+						<Q3STR s={filterMessage(isTranslated ? translatedText : content)}/>
 						<button 
 							className="translate-btn" 
 							onClick={translateMessage}
@@ -199,7 +202,7 @@ export default function Row(props) {
             return (
                 <div className="row -announce">
                     <div className="col timestamp">{props.data.time}</div>
-                    <div className="col message"><Q3STR s={filterMessage(props.data.content)}/></div>
+                    <div className="col message"><Q3STR s={filterMessage(content)}/></div>
                 </div>
             )
     }
@@ -211,7 +214,8 @@ export function RowNotify(props) {
         return null
     }
     
-    if(props.data.content === "") {
+    const content = typeof props.data.content === 'string' ? props.data.content : ''
+    if(content === "") {
         return null
     }
 
@@ -220,7 +224,7 @@ export function RowNotify(props) {
             return (
                 <div className="line-wrap">
                     <div className="player-name"><Q3STR s={filterAuthor(props.data.author)}/>:</div>
-                    <div className="message"><Q3STR s={filterMessage(props.data.content)}/></div>
+                    <div className="message"><Q3STR s={filterMessage(content)}/></div>
                 </div>
             )
         // case 'PRINT':
@@ -233,7 +237,7 @@ export function RowNotify(props) {
         default:
             return (
                 <div className="line-wrap">
-                    <div className="message"><Q3STR s={filterMessage(props.data.content)}/></div>
+                    <div className="message"><Q3STR s={filterMessage(content)}/></div>
                 </div>
             )
     }

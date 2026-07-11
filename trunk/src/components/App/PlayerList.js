@@ -545,11 +545,10 @@ isGTKServer() {
 							return cleanAPIName === cleanServerstateName
 						}) : null
 					
-					// Find spectator data from scores
-					const scoreData = apiScores.find(score => {
-						const cleanAPIName = this.stripQuakeColors(apiPlayerData?.name || '')
-						return cleanAPIName === cleanServerstateName
-					})
+					// Find spectator data from scores via the matched player's client id
+					const scoreData = apiPlayerData
+						? apiScores.find(score => score.player_num === apiPlayerData.clientId)
+						: null
 					
 					if (apiPlayerData || scoreData) {
 						return {
